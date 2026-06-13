@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import EmergencyType from './EmergencyType.jsx';
 import Severity from './Severity.jsx';
 import LocationContacts from './LocationContacts.jsx';
+import RequestProcessing from './RequestProcessing.jsx';
 
 const resourceTypes = [
   { id: 'blood', name: 'Blood Donor', iconColor: 'text-red-500 bg-red-50', icon: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z' },
@@ -385,34 +386,18 @@ export default function Dashboard({ user, onLogout, currentHash }) {
 
               {/* SUBSTEP 4: REQUEST PROCESSING */}
               {sosStep === 'processing' && (
-                <div className="flex-1 flex flex-col justify-between items-center text-center p-4">
-                  <div className="my-auto flex flex-col items-center">
-                    <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center text-red-600 mb-6 relative">
-                      <div className="absolute inset-0 rounded-full border-4 border-red-500 border-t-transparent animate-spin" />
-                      <svg className="w-10 h-10 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </div>
-
-                    <h2 className="text-xl font-extrabold text-neutral-850 tracking-wide">Processing Request...</h2>
-                    <p className="text-xs text-neutral-400 mt-2 max-w-[280px]">
-                      Contacting nearest responders and establishing GPS tracking nodes.
-                    </p>
-
-                    <div className="w-56 bg-neutral-150 h-1.5 rounded-full overflow-hidden mt-6 relative">
-                      <div className="bg-[#d61c24] h-full rounded-full animate-[progress-pulse_2s_infinite]" style={{ width: '40%' }} />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => window.location.hash = '#/sos/tracking'}
-                    type="button"
-                    className="w-full py-3.5 bg-[#d61c24] hover:bg-[#b31018] text-white font-bold rounded-xl text-xs shadow-md shadow-red-500/10 flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 focus:outline-none"
-                  >
-                    <span>Continue to SOS Tracking</span>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-                  </button>
-                </div>
+                <RequestProcessing
+                  user={user}
+                  selectedEmergency={selectedEmergency}
+                  selectedSeverity={selectedSeverity}
+                  activeContacts={activeContacts}
+                  onCancel={() => {
+                    window.location.hash = '#/sos/location-contacts';
+                  }}
+                  onComplete={() => {
+                    window.location.hash = '#/sos/tracking';
+                  }}
+                />
               )}
 
               {/* SUBSTEP 5: LIVE DISTRESS BEACON TRACKER */}
