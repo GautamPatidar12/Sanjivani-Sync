@@ -71,7 +71,7 @@ export default function EmergencyType({ onBack, onContinue }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between">
+    <div className="flex-1 flex flex-col justify-between h-full overflow-y-auto no-scrollbar pb-6">
       
       {/* Top back button, header texts and graphics */}
       <div>

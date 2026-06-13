@@ -25,10 +25,10 @@ export const toggleOnlineStatus = async (req: AuthRequest, res: Response): Promi
 
     if (location) {
       user.location = {
-        address: location.address || user.location.address,
+        address: location.address || user.location?.address || '',
         coordinates: {
           type: 'Point',
-          coordinates: location.coordinates || user.location.coordinates.coordinates,
+          coordinates: location.coordinates || user.location?.coordinates?.coordinates || [0, 0],
         },
       };
     }
@@ -41,6 +41,54 @@ export const toggleOnlineStatus = async (req: AuthRequest, res: Response): Promi
 
     res.json({
       message: `User status set to ${isOnline ? 'Online' : 'Offline'}`,
+      user: {
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        orgType: updatedUser.orgType,
+        isOnline: updatedUser.isOnline,
+        location: updatedUser.location,
+        helpTypes: updatedUser.helpTypes,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { name, contactNumber, location, helpTypes } = req.body;
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    if (name) user.name = name;
+    if (contactNumber) user.contactNumber = contactNumber;
+    
+    if (location) {
+      user.location = {
+        address: location.address || user.location?.address || '',
+        coordinates: {
+          type: 'Point',
+          coordinates: location.coordinates || user.location?.coordinates?.coordinates || [0, 0],
+        },
+      };
+    }
+
+    if (helpTypes) {
+      user.helpTypes = helpTypes;
+    }
+
+    const updatedUser = await user.save();
+
+    res.json({
+      message: 'Profile updated successfully',
       user: {
         _id: updatedUser._id,
         name: updatedUser.name,

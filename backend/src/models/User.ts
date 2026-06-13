@@ -15,7 +15,7 @@ export interface IUser extends Document {
     };
   };
   isOnline: boolean;
-  helpTypes: ('blood' | 'shelter' | 'food' | 'transport')[];
+  helpTypes: ('blood' | 'shelter' | 'food' | 'transport' | 'volunteer' | 'medicine')[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,7 +77,7 @@ const userSchema: Schema = new Schema(
     },
     helpTypes: {
       type: [String],
-      enum: ['blood', 'shelter', 'food', 'transport'],
+      enum: ['blood', 'shelter', 'food', 'transport', 'volunteer', 'medicine'],
       default: [],
     },
   },
