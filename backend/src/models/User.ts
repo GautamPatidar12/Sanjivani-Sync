@@ -16,6 +16,13 @@ export interface IUser extends Document {
   };
   isOnline: boolean;
   helpTypes: ('blood' | 'shelter' | 'food' | 'transport' | 'volunteer' | 'medicine')[];
+  pushSubscriptions?: {
+    endpoint: string;
+    keys: {
+      p256dh: string;
+      auth: string;
+    };
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,6 +85,16 @@ const userSchema: Schema = new Schema(
     helpTypes: {
       type: [String],
       enum: ['blood', 'shelter', 'food', 'transport', 'volunteer', 'medicine'],
+      default: [],
+    },
+    pushSubscriptions: {
+      type: [{
+        endpoint: String,
+        keys: {
+          p256dh: String,
+          auth: String,
+        },
+      }],
       default: [],
     },
   },

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import EmergencyType from './EmergencyType.jsx';
 import Severity from './Severity.jsx';
 import LocationContacts from './LocationContacts.jsx';
+import NotificationsFeed from './NotificationsFeed.jsx';
 
 const resourceTypes = [
   { id: 'blood', name: 'Blood Donor', iconColor: 'text-red-500 bg-red-50', icon: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z' },
@@ -27,6 +28,8 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     activeTab = 'home';
   } else if (currentHash === '#/resources') {
     activeTab = 'resources';
+  } else if (currentHash === '#/notifications') {
+    activeTab = 'notifications';
   } else if (currentHash === '#/profile') {
     activeTab = 'profile';
   } else if (currentHash.startsWith('#/sos')) {
@@ -49,6 +52,8 @@ export default function Dashboard({ user, onLogout, currentHash }) {
   const [selectedResourceCategory, setSelectedResourceCategory] = useState(null);
   const [availableProviders, setAvailableProviders] = useState([]);
   const [isProvidersLoading, setIsProvidersLoading] = useState(false);
+  const [isShowingResourceForm, setIsShowingResourceForm] = useState(false);
+  const [requestSubmitted, setRequestSubmitted] = useState(false);
 
   // Edit Profile State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -137,6 +142,46 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     }
   }, [activeTab]);
 
+  // Process SOS Request when hitting processing step
+  useEffect(() => {
+    if (activeTab === 'sos' && sosStep === 'processing') {
+      const createRequest = async () => {
+        try {
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          const token = localStorage.getItem('token');
+          
+          await fetch(`${API_URL}/api/help-requests`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              helpType: selectedEmergency?.id || 'volunteer',
+              description: `Emergency Level: ${selectedSeverity?.title || 'Unknown'}`,
+              urgency: selectedSeverity?.id || 'medium',
+              location: {
+                address: user?.location?.address || 'Current Location',
+                coordinates: user?.location?.coordinates?.coordinates || [0, 0]
+              }
+            })
+          });
+
+          setTimeout(() => {
+            window.location.hash = '#/sos/tracking';
+          }, 2000);
+        } catch (error) {
+          console.error('Failed to create emergency request', error);
+          setTimeout(() => {
+            window.location.hash = '#/sos/tracking';
+          }, 2000);
+        }
+      };
+
+      createRequest();
+    }
+  }, [activeTab, sosStep, selectedEmergency, selectedSeverity, user]);
+
   // Active Emergency SOS seconds tracker
   useEffect(() => {
     let interval = null;
@@ -154,7 +199,8 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     e.preventDefault();
     setRequestSubmitted(true);
     setTimeout(() => {
-      setSelectedFormResource(null);
+      setSelectedResourceCategory(null);
+      setIsShowingResourceForm(false);
       setRequestSubmitted(false);
     }, 2200);
   };
@@ -164,7 +210,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
   return (
     <div className="flex flex-col md:flex-row w-full h-full relative">
       {/* Navigation Sidebar (Desktop) / Bottom Bar (Mobile) */}
-      <div className="bg-white/80 backdrop-blur-md border-t md:border-t-0 md:border-r border-neutral-200/60 px-6 md:px-6 py-2.5 md:py-8 flex md:flex-col justify-between md:justify-start items-center md:items-start z-20 order-last md:order-first md:w-64 md:h-full shrink-0 md:gap-4 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+      <div className="bg-white/95 backdrop-blur-md border-t md:border-t-0 md:border-r border-neutral-200/60 px-2 sm:px-6 py-2 md:py-8 flex md:flex-col justify-around md:justify-start items-center md:items-start z-50 order-last md:order-first md:w-64 md:h-full shrink-0 md:gap-4 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] md:shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         
         {/* Desktop Logo Area */}
         <div className="hidden md:flex items-center gap-3 w-full mb-8 px-2">
@@ -177,7 +223,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         <button
           onClick={() => window.location.hash = '#/dashboard'}
           type="button"
-          className={`flex flex-col md:flex-row items-center md:justify-start gap-1.5 md:gap-4 focus:outline-none transition-all w-14 md:w-full md:px-4 md:py-3.5 md:rounded-xl ${activeTab === 'home' ? 'text-[#d61c24] md:bg-red-50/50 md:shadow-sm md:shadow-red-500/5' : 'text-neutral-400 hover:text-neutral-500 md:hover:bg-neutral-50'}`}
+          className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-4 focus:outline-none transition-all flex-1 md:flex-none md:w-full md:px-4 md:py-3.5 md:rounded-xl ${activeTab === 'home' ? 'text-[#d61c24] md:bg-red-50/50 md:shadow-sm md:shadow-red-500/5' : 'text-neutral-400 hover:text-neutral-500 md:hover:bg-neutral-50'}`}
         >
           <svg className="w-5.5 h-5.5 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
@@ -188,7 +234,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         <button
           onClick={() => window.location.hash = '#/resources'}
           type="button"
-          className={`flex flex-col md:flex-row items-center md:justify-start gap-1.5 md:gap-4 focus:outline-none transition-all w-14 md:w-full md:px-4 md:py-3.5 md:rounded-xl ${activeTab === 'resources' ? 'text-[#d61c24] md:bg-red-50/50 md:shadow-sm md:shadow-red-500/5' : 'text-neutral-400 hover:text-neutral-500 md:hover:bg-neutral-50'}`}
+          className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-4 focus:outline-none transition-all flex-1 md:flex-none md:w-full md:px-4 md:py-3.5 md:rounded-xl ${activeTab === 'resources' ? 'text-[#d61c24] md:bg-red-50/50 md:shadow-sm md:shadow-red-500/5' : 'text-neutral-400 hover:text-neutral-500 md:hover:bg-neutral-50'}`}
         >
           <svg className="w-5.5 h-5.5 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
             <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
@@ -197,22 +243,33 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         </button>
 
         <button
+          onClick={() => window.location.hash = '#/notifications'}
+          type="button"
+          className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-4 focus:outline-none transition-all flex-1 md:flex-none md:w-full md:px-4 md:py-3.5 md:rounded-xl ${activeTab === 'notifications' ? 'text-[#d61c24] md:bg-red-50/50 md:shadow-sm md:shadow-red-500/5' : 'text-neutral-400 hover:text-neutral-500 md:hover:bg-neutral-50'}`}
+        >
+          <svg className="w-5.5 h-5.5 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
+            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+          </svg>
+          <span className="text-3xs md:text-sm font-extrabold tracking-tight">Alerts</span>
+        </button>
+
+        <button
           onClick={() => {
             window.location.hash = '#/sos/type';
           }}
           type="button"
-          className="relative flex flex-col md:flex-row items-center md:justify-start gap-1.5 md:gap-4 focus:outline-none transition-all active:scale-95 z-30 w-16 -mt-6 md:mt-4 md:mb-2 md:w-full md:px-4 md:py-3 md:bg-[#d61c24] md:rounded-2xl md:text-white md:shadow-xl md:shadow-red-500/30 md:hover:bg-[#b31018] group"
+          className="relative flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-4 focus:outline-none transition-all active:scale-95 z-30 flex-[1.2] md:flex-none -mt-6 md:mt-4 md:mb-2 md:w-full md:px-4 md:py-3 md:bg-[#d61c24] md:rounded-2xl md:text-white md:shadow-xl md:shadow-red-500/30 md:hover:bg-[#b31018] group"
         >
-          <div className="w-13 h-13 md:w-7 md:h-7 rounded-full bg-[#d61c24] md:bg-transparent flex items-center justify-center text-white shadow-lg md:shadow-none shadow-red-500/30 border-4 border-white md:border-none font-extrabold text-[10px] md:text-xs tracking-wider uppercase group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 md:w-7 md:h-7 rounded-full bg-[#d61c24] md:bg-transparent flex items-center justify-center text-white shadow-lg md:shadow-none shadow-red-500/30 border-4 border-white md:border-none font-extrabold text-[10px] md:text-xs tracking-wider uppercase group-hover:scale-110 transition-transform">
             SOS
           </div>
-          <span className={`text-3xs md:text-sm font-extrabold tracking-tight mt-1 md:mt-0 ${activeTab === 'sos' ? 'text-[#d61c24] md:text-white' : 'text-neutral-400 md:text-white'}`}>Emergency SOS</span>
+          <span className={`text-[9px] md:text-sm font-extrabold tracking-tight mt-1 md:mt-0 ${activeTab === 'sos' ? 'text-[#d61c24] md:text-white' : 'text-neutral-400 md:text-white'}`}>SOS</span>
         </button>
 
         <button
           onClick={() => window.location.hash = '#/profile'}
           type="button"
-          className={`flex flex-col md:flex-row items-center md:justify-start gap-1.5 md:gap-4 focus:outline-none transition-all w-14 md:w-full md:mt-auto md:px-4 md:py-3.5 md:rounded-xl ${activeTab === 'profile' ? 'text-[#d61c24] md:bg-red-50/50 md:shadow-sm md:shadow-red-500/5' : 'text-neutral-400 hover:text-neutral-500 md:hover:bg-neutral-50'}`}
+          className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-4 focus:outline-none transition-all flex-1 md:flex-none md:mt-auto md:px-4 md:py-3.5 md:rounded-xl ${activeTab === 'profile' ? 'text-[#d61c24] md:bg-red-50/50 md:shadow-sm md:shadow-red-500/5' : 'text-neutral-400 hover:text-neutral-500 md:hover:bg-neutral-50'}`}
         >
           <svg className="w-5.5 h-5.5 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -254,7 +311,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
       )}
 
       {/* Scrollable Container Body */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-6 md:px-10 py-6 md:py-8 flex flex-col bg-neutral-50/30">
+      <div className="flex-1 overflow-y-auto no-scrollbar px-3 md:px-10 py-4 md:py-8 flex flex-col bg-neutral-50/30">
         <div className="flex-1 flex flex-col gap-5 h-full">
           
           {/* TAB 1: HOME */}
@@ -396,7 +453,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                 {resourceTypes.map((res) => (
                   <button
                     key={res.id}
-                    onClick={() => setSelectedFormResource(res)}
+                    onClick={() => setSelectedResourceCategory(res)}
                     className="bg-white border border-neutral-100 rounded-2xl p-4 flex items-center justify-between text-left hover:border-red-100 hover:bg-red-50/10 transition-colors w-full focus:outline-none"
                   >
                     <div className="flex items-center gap-4">
@@ -417,10 +474,24 @@ export default function Dashboard({ user, onLogout, currentHash }) {
             </div>
           )}
 
+          {/* TAB 3: NOTIFICATIONS / ALERTS */}
+          {activeTab === 'notifications' && (
+            <div className="flex-1 flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <button onClick={() => window.location.hash = '#/dashboard'} className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
+                <h2 className="text-lg font-bold text-neutral-800">Emergency Alerts</h2>
+              </div>
+              <p className="text-xs text-neutral-400">Nearby requests matching your capabilities.</p>
+              
+              {/* Notification Feed Component Placeholder - Will implement full logic next */}
+              <NotificationsFeed />
+            </div>
+          )}
+
           {/* TAB 3: SOS STEPS FLOW */}
           {activeTab === 'sos' && (
-            <div className="flex-1 flex flex-col items-center md:justify-center py-2 md:py-8 h-full">
-              <div className="w-full md:max-w-md lg:max-w-lg bg-white/95 backdrop-blur-xl md:shadow-[0_20px_60px_rgba(214,28,36,0.08)] md:border border-red-100/50 rounded-[2.5rem] md:p-8 flex flex-col min-h-[500px] h-full md:h-auto overflow-hidden relative">
+            <div className="flex-1 flex flex-col items-center md:justify-center py-0 md:py-8 h-full">
+              <div className="w-full md:max-w-md lg:max-w-lg bg-white/95 backdrop-blur-xl md:shadow-[0_20px_60px_rgba(214,28,36,0.08)] md:border border-red-100/50 rounded-[2.5rem] md:p-8 flex flex-col h-full md:h-auto overflow-hidden relative">
                 {/* Desktop SOS Header Decoration */}
                 <div className="hidden md:block absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-400 via-red-500 to-red-400" />
                 <div className="hidden md:block absolute -top-20 -right-20 w-40 h-40 bg-red-100 rounded-full filter blur-3xl opacity-50 pointer-events-none" />
@@ -570,7 +641,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
           {/* TAB 4: PROFILE */}
           {activeTab === 'profile' && (
             <div className="flex-1 flex flex-col gap-6 md:items-center">
-              <div className="w-full md:max-w-2xl bg-white/80 backdrop-blur-lg rounded-[2rem] border border-neutral-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 md:p-10 flex flex-col gap-6 mt-2 md:mt-8 relative overflow-hidden">
+              <div className="w-full md:max-w-2xl bg-white/80 backdrop-blur-lg md:rounded-[2rem] border-0 md:border border-neutral-100 shadow-none md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-2 sm:p-6 md:p-10 flex flex-col gap-4 sm:gap-6 mt-0 md:mt-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-red-50 rounded-full filter blur-3xl opacity-50 -translate-y-1/2 translate-x-1/3 pointer-events-none" />
                 
                 <div className="flex items-center gap-4 relative z-10">
@@ -578,8 +649,8 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                   <h2 className="text-xl md:text-2xl font-black text-neutral-800 tracking-tight">Emergency Profile</h2>
                 </div>
 
-                <div className="bg-neutral-50/50 rounded-2xl border border-neutral-100 p-6 flex flex-col gap-6 relative z-10">
-                  <div className="flex items-center gap-5 md:gap-6">
+                <div className="bg-neutral-50/50 rounded-2xl border border-neutral-100 p-4 sm:p-6 flex flex-col gap-4 sm:gap-6 relative z-10">
+                  <div className="flex items-center gap-4 md:gap-6">
                     <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-white shadow-lg shadow-red-500/10 ring-2 ring-red-100 bg-red-50 text-red-600 flex items-center justify-center">
                       <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -660,7 +731,11 @@ export default function Dashboard({ user, onLogout, currentHash }) {
             <div className="absolute -top-16 -right-16 w-32 h-32 bg-blue-100 rounded-full filter blur-3xl opacity-60 pointer-events-none" />
 
             <button
-              onClick={() => setSelectedResourceCategory(null)}
+              onClick={() => {
+                setSelectedResourceCategory(null);
+                setIsShowingResourceForm(false);
+                setRequestSubmitted(false);
+              }}
               className="absolute top-5 right-5 p-2 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100/80 rounded-full transition-colors focus:outline-none z-50 bg-white/50 backdrop-blur-sm"
             >
               <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -668,20 +743,66 @@ export default function Dashboard({ user, onLogout, currentHash }) {
               </svg>
             </button>
 
-            <div className="flex items-center gap-4 mb-6 relative z-10 shrink-0">
-              <div className={`p-3 md:p-4 rounded-2xl ${selectedResourceCategory.iconColor} shadow-inner`}>
-                <svg className="w-6 h-6 md:w-8 md:h-8 fill-current" viewBox="0 0 24 24">
-                  <path d={selectedResourceCategory.icon} />
-                </svg>
+            <div className="flex items-center justify-between mb-6 relative z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className={`p-3 md:p-4 rounded-2xl ${selectedResourceCategory.iconColor} shadow-inner`}>
+                  <svg className="w-6 h-6 md:w-8 md:h-8 fill-current" viewBox="0 0 24 24">
+                    <path d={selectedResourceCategory.icon} />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg md:text-xl font-black text-neutral-850 tracking-tight">{isShowingResourceForm ? `Request ${selectedResourceCategory.name}` : `Available ${selectedResourceCategory.name}`}</h3>
+                  <p className="text-xs md:text-sm text-neutral-400 mt-0.5 font-medium">{isShowingResourceForm ? 'Log a general request' : 'Nearby helpers and organizations.'}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg md:text-xl font-black text-neutral-850 tracking-tight">Available {selectedResourceCategory.name}</h3>
-                <p className="text-xs md:text-sm text-neutral-400 mt-0.5 font-medium">Nearby helpers and organizations.</p>
-              </div>
+              {!isShowingResourceForm && (
+                <button onClick={() => setIsShowingResourceForm(true)} className="hidden md:flex items-center gap-1.5 text-xs font-bold text-white bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-xl transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  New Request
+                </button>
+              )}
             </div>
+            
+            {!isShowingResourceForm && (
+              <button onClick={() => setIsShowingResourceForm(true)} className="md:hidden w-full mb-4 flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-blue-500 hover:bg-blue-600 px-4 py-3 rounded-xl transition-colors relative z-10">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Create New Request
+              </button>
+            )}
 
             <div className="flex-1 overflow-y-auto no-scrollbar relative z-10 flex flex-col gap-3">
-              {isProvidersLoading ? (
+              {isShowingResourceForm ? (
+                requestSubmitted ? (
+                  <div className="py-10 flex flex-col items-center justify-center text-center">
+                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 scale-up-animation">
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <h2 className="text-xl font-bold text-neutral-800">Request Sent!</h2>
+                    <p className="text-sm text-neutral-500 mt-2">Connecting with nearest available volunteers.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleResourceFormSubmit} className="flex flex-col gap-4 mt-2">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-neutral-600">Urgency Level</label>
+                      <select required className="w-full text-sm px-4 py-3 bg-neutral-50/50 border border-neutral-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-neutral-800 transition-all">
+                        <option value="high">Critical / High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low / Planned</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-neutral-600">Additional Details</label>
+                      <textarea required rows="3" placeholder="Any specific requirements..." className="w-full text-sm px-4 py-3 bg-neutral-50/50 border border-neutral-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-neutral-800 transition-all resize-none"></textarea>
+                    </div>
+                    <div className="flex gap-3 mt-4">
+                      <button type="button" onClick={() => setIsShowingResourceForm(false)} className="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold py-3.5 rounded-xl text-sm transition-colors">Back</button>
+                      <button type="submit" className={`flex-1 bg-gradient-to-r ${selectedResourceCategory.id === 'blood' ? 'from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' : 'from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'} text-white font-bold py-3.5 rounded-xl text-sm transition-all shadow-md active:scale-[0.98]`}>
+                        Submit Request
+                      </button>
+                    </div>
+                  </form>
+                )
+              ) : isProvidersLoading ? (
                 <div className="py-12 flex flex-col items-center justify-center">
                   <div className="w-10 h-10 border-4 border-neutral-200 border-t-blue-500 rounded-full animate-spin"></div>
                   <span className="text-sm font-bold text-neutral-500 mt-4">Searching nearby providers...</span>

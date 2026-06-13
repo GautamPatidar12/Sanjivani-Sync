@@ -15,7 +15,14 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: true, // Allow all origins and reflect the requesting origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true,
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+}));
+app.options('*', cors()); // Explicitly handle preflight for all routes
 app.use(express.json());
 
 // Serverless database connection caching

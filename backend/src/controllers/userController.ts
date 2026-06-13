@@ -104,3 +104,35 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const savePushSubscription = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { subscription } = req.body;
+    
+    if (!subscription || !subscription.endpoint) {
+      res.status(400).json({ message: 'Invalid subscription object' });
+      return;
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    // Check if subscription already exists based on endpoint
+    const existingSub = user.pushSubscriptions?.find(s => s.endpoint === subscription.endpoint);
+    
+    if (!existingSub) {
+      if (!user.pushSubscriptions) {
+        user.pushSubscriptions = [];
+      }
+      user.pushSubscriptions.push(subscription);
+      await user.save();
+    }
+
+    res.status(200).json({ message: 'Push subscription saved successfully' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
