@@ -6,7 +6,7 @@ import User from '../models/User';
  */
 export const getCategories = async (req: Request, res: Response): Promise<void> => {
   try {
-    const categories = ['blood', 'shelter', 'food', 'transport'];
+    const categories = ['blood', 'shelter', 'food', 'transport', 'volunteer', 'medicine'];
     
     // We can aggregate to find how many users are offering each category
     const categoryCounts = await User.aggregate([

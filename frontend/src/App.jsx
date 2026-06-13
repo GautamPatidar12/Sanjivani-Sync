@@ -4,7 +4,10 @@ import Signup from './components/Signup.jsx';
 import Dashboard from './components/Dashboard.jsx';
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   
   // Custom Hash Router State
   const [currentHash, setCurrentHash] = useState(window.location.hash || '#/login');
@@ -31,6 +34,10 @@ function App() {
   }, [currentHash, isLoggedIn]);
 
   const handleLoginSuccess = (userData) => {
+    if (userData.token) {
+      localStorage.setItem('token', userData.token);
+    }
+    localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     window.location.hash = '#/dashboard';
   };
@@ -44,6 +51,8 @@ function App() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     window.location.hash = '#/login';
   };

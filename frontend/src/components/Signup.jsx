@@ -5,12 +5,12 @@ import Logo from './Logo.jsx';
 export default function Signup({ onSuccess, currentHash }) {
   const [accountType, setAccountType] = useState('user'); // 'user' or 'organization'
   const [orgType, setOrgType] = useState('hospital');
-  
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [contactNumber, setContactNumber] = useState('');
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState('');
 
@@ -67,11 +67,11 @@ export default function Signup({ onSuccess, currentHash }) {
         const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ credential: tokenResponse.access_token })
+          body: JSON.stringify({ credential: tokenResponse.token })
         });
-        
+
         const data = await res.json();
-        
+
         if (!res.ok) {
           throw new Error(data.message || 'Google Signup failed');
         }
@@ -96,7 +96,7 @@ export default function Signup({ onSuccess, currentHash }) {
         {/* Subtle background patterns */}
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-red-600 rounded-full mix-blend-multiply filter blur-[80px] opacity-50 -translate-y-1/2 translate-x-1/3 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-red-800 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 translate-y-1/3 -translate-x-1/4 pointer-events-none" />
-        
+
         <div className="relative z-10 flex items-center gap-3">
           <div className="bg-white p-2.5 rounded-2xl shadow-lg">
             <Logo className="w-8 h-8 text-[#d61c24]" />
@@ -106,7 +106,7 @@ export default function Signup({ onSuccess, currentHash }) {
 
         <div className="relative z-10 max-w-sm mt-12 mb-auto">
           <h2 className="text-4xl font-black leading-[1.1] tracking-tight mb-6">
-            Join The <br/> Emergency <br/> <span className="text-red-200">Network.</span>
+            Join The <br /> Emergency <br /> <span className="text-red-200">Network.</span>
           </h2>
           <p className="text-red-100 font-medium text-sm leading-relaxed">
             Create an account to become a part of our decentralized network. Whether you are an individual responder or an organization, every connection matters.
@@ -190,7 +190,7 @@ export default function Signup({ onSuccess, currentHash }) {
 
             {/* Signup Form */}
             <form onSubmit={handleSignupSubmit} className="flex flex-col gap-4">
-              
+
               {accountType === 'organization' && (
                 <div className="flex flex-col gap-1.5 animate-fadeIn">
                   <label className="text-xs font-bold text-neutral-700">Organization Type</label>
@@ -229,7 +229,7 @@ export default function Signup({ onSuccess, currentHash }) {
                   className="w-full text-sm px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all font-medium text-neutral-800 placeholder-neutral-400"
                 />
               </div>
-              
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-neutral-700">Contact Number</label>
                 <input
@@ -252,8 +252,8 @@ export default function Signup({ onSuccess, currentHash }) {
                 />
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isLoading}
                 className="mt-2 w-full bg-[#d61c24] hover:bg-[#b31018] text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-red-500/20 active:scale-[0.98] disabled:opacity-70"
               >

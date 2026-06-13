@@ -15,21 +15,46 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  next();
+});
 app.use(express.json());
 
-// Database connection
+// Serverless database connection caching
+let isConnected = false;
+
 const connectDB = async () => {
+  if (isConnected) {
+    return;
+  }
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sanjivani_sync');
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    const db = await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sanjivani_sync');
+    isConnected = db.connections[0].readyState === 1;
+    console.log(`MongoDB Connected: ${db.connection.host}`);
   } catch (error: any) {
     console.error(`MongoDB Connection Error: ${error.message}`);
-    // DO NOT process.exit(1) in a Serverless Function, it will cause a 500 FUNCTION_INVOCATION_FAILED
   }
 };
 
-connectDB();
+// Apply connection middleware to ensure DB is connected before handling requests in serverless
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

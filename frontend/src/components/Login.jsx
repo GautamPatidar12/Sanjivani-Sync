@@ -48,11 +48,11 @@ export default function Login({ onSuccess, currentHash }) {
         const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ credential: tokenResponse.access_token })
+          body: JSON.stringify({ credential: tokenResponse.token })
         });
-        
+
         const data = await res.json();
-        
+
         if (!res.ok) {
           throw new Error(data.message || 'Google Login failed');
         }
@@ -77,7 +77,7 @@ export default function Login({ onSuccess, currentHash }) {
         {/* Subtle background patterns */}
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-red-600 rounded-full mix-blend-multiply filter blur-[80px] opacity-50 -translate-y-1/2 translate-x-1/3 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-red-800 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 translate-y-1/3 -translate-x-1/4 pointer-events-none" />
-        
+
         <div className="relative z-10 flex items-center gap-3">
           <div className="bg-white p-2.5 rounded-2xl shadow-lg">
             <Logo className="w-8 h-8 text-[#d61c24]" />
@@ -87,7 +87,7 @@ export default function Login({ onSuccess, currentHash }) {
 
         <div className="relative z-10 max-w-sm mt-12 mb-auto">
           <h2 className="text-4xl font-black leading-[1.1] tracking-tight mb-6">
-            Emergency <br/> Response <br/> <span className="text-red-200">Reimagined.</span>
+            Emergency <br /> Response <br /> <span className="text-red-200">Reimagined.</span>
           </h2>
           <p className="text-red-100 font-medium text-sm leading-relaxed">
             Join the decentralized network of first responders, blood donors, and medical facilities. Faster coordination when every second counts.
@@ -178,8 +178,8 @@ export default function Login({ onSuccess, currentHash }) {
                 />
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isLoading}
                 className="mt-2 w-full bg-[#d61c24] hover:bg-[#b31018] text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-red-500/20 active:scale-[0.98] disabled:opacity-70"
               >

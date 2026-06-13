@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { toggleOnlineStatus } from '../controllers/userController';
+import { toggleOnlineStatus, updateProfile, savePushSubscription } from '../controllers/userController';
 import { authenticateToken } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -59,5 +59,62 @@ const router = Router();
  *         description: Server error
  */
 router.put('/status', authenticateToken, toggleOnlineStatus);
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   put:
+ *     summary: Update user profile details
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               contactNumber:
+ *                 type: string
+ *               helpTypes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               location:
+ *                 type: object
+ *                 properties:
+ *                   address:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       404:
+ *         description: User not found
+ */
+router.put('/profile', authenticateToken, updateProfile);
+
+/**
+ * @swagger
+ * /api/users/subscribe:
+ *   post:
+ *     summary: Subscribe a user device for push notifications
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               subscription:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Subscription saved
+ */
+router.post('/subscribe', authenticateToken, savePushSubscription);
 
 export default router;

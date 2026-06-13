@@ -1,6 +1,15 @@
 import { Request, Response } from 'express';
 import HelpRequest from '../models/HelpRequest';
 import User from '../models/User';
+import webpush from 'web-push';
+import dotenv from 'dotenv';
+dotenv.config();
+
+webpush.setVapidDetails(
+  'mailto:support@sanjivanisync.com',
+  process.env.VAPID_PUBLIC_KEY || '',
+  process.env.VAPID_PRIVATE_KEY || ''
+);
 
 interface AuthRequest extends Request {
   user?: any;
@@ -30,6 +39,38 @@ export const createHelpRequest = async (req: AuthRequest, res: Response): Promis
       },
       status: 'pending',
     });
+
+    // Populate requester to send their name in the notification
+    const populatedRequest = await HelpRequest.findById(helpRequest._id).populate('requester', 'name');
+
+    // Notify online helpers who can help with this type
+    const helpers = await User.find({
+      isOnline: true,
+      helpTypes: helpType,
+      _id: { $ne: req.user.id }
+    });
+
+    // We configure web-push at the top of the file
+    const requesterName = (populatedRequest?.requester as any)?.name || 'Someone';
+    const payload = JSON.stringify({
+      title: 'New Emergency Request!',
+      body: `${requesterName} needs ${helpType} nearby.`,
+      icon: '/icon-192x192.png',
+      data: { url: '/#/dashboard?tab=notifications' }
+    });
+
+    const notifications = [];
+    for (const helper of helpers) {
+      if (helper.pushSubscriptions && helper.pushSubscriptions.length > 0) {
+        for (const sub of helper.pushSubscriptions) {
+          notifications.push(
+            webpush.sendNotification(sub as any, payload).catch((err: any) => console.error('Push error:', err))
+          );
+        }
+      }
+    }
+    
+    await Promise.all(notifications);
 
     res.status(201).json({
       message: 'Emergency help request created successfully',
@@ -222,3 +263,16 @@ export const getMyAssignments = async (req: AuthRequest, res: Response): Promise
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+// 8. Get All Pending Help Requests (regardless of capability, sorted by recency)
+export const getAllPendingHelpRequests = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const requests = await HelpRequest.find({ status: 'pending' })
+      .sort({ createdAt: -1 })
+      .populate('requester', 'name email contactNumber location');
+    res.json(requests);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+

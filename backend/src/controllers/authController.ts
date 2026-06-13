@@ -78,10 +78,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const targetEmail = email.toLowerCase();
 
     // Check if user exists
-    const user = await User.findOne({ email: targetEmail });
+    const user = await User.findOne({ email: targetEmail }).select('+password');
 
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' });
+      return;
+    }
+
+    if (!user.password) {
+      res.status(401).json({ message: 'Invalid credentials. Please use Google Login if you signed up with Google.' });
       return;
     }
 
