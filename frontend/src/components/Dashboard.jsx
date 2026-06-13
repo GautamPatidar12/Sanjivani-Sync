@@ -68,7 +68,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         // Play subtle positive ping (base64 simple tick/ping)
         const audio = new Audio('data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTEAAAAcHR0eHh4fHx8fHyAgICAhISEhISEiIiIiIyMjIyMjJCQkJCUlJSUlJg==');
         audio.volume = 0.1;
-        audio.play().catch(e => {}); // Ignore play errors (user interaction rules)
+        audio.play().catch(e => { }); // Ignore play errors (user interaction rules)
       }, 5000);
       return () => clearInterval(interval);
     }
@@ -434,18 +434,18 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                       onClick={() => window.location.hash = '#/resources'}
                       className="text-2xs font-extrabold text-blue-600 hover:underline hover:text-blue-700 transition-colors"
                     >
-                      View All
+                      <p class="hidden">View All</p>
                     </button>
                   </div>
 
                   <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 md:flex-wrap">
                     {nearbyResources.map((res) => (
                       <div key={res.id} className={`flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex flex-col gap-2 w-40 md:w-48 lg:w-56 transition-all hover:border-${res.color}-100 hover:shadow-md relative group`}>
-                        <button 
+                        <button
                           onClick={() => removeNearbyResource(res.id)}
                           className="absolute top-2 right-2 text-neutral-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
                         >
-                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
                         </button>
                         <div className="flex items-center gap-3">
                           <div className={`p-2 rounded-lg bg-${res.color}-50 text-${res.color}-600`}>
