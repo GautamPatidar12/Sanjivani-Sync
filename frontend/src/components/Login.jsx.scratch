@@ -1,0 +1,69 @@
+import React, { useState } from 'react';
+import Logo from './Logo.jsx';
+import { useGoogleLogin } from '@react-oauth/google';
+
+export default function Login({ onSuccess, currentHash }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  const handleEmailSubmit = async (e) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setAuthError('Please fill in both email and password.');
+      return;
+    }
+
+    setIsLoading(true);
+    setAuthError('');
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      onSuccess(data);
+    } catch (err) {
+      setAuthError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setIsLoading(true);
+      setAuthError('');
+      try {
+        // Send the access_token or id_token to backend. 
+        // wait, useGoogleLogin returns access_token. But our backend expects credential (idToken).
+        // Actually, to get an idToken, we can either use standard GoogleLogin component, or use useGoogleLogin with flow: 'auth-code' / 'implicit' correctly.
+        // It's better to fetch user info directly or pass the access_token. Let's just use GoogleLogin. Wait, the user already uses a custom button design.
+        // Let's use the fetch approach for Google User Info since we have access_token. 
+        // Or wait, if we use fetch to get email, we can send that to backend. But backend verifyIdToken expects an id_token.
+        // Let's change this in the backend to expect access_token? No, verifyIdToken requires id_token.
+        // If we want id_token, we can use useGoogleLogin({ flow: 'implicit' }) ? No, by default useGoogleLogin does not return id_token unless we specify it.
+        // The standard way is to use `<GoogleLogin />` component. Since the user wants a custom button, we can't easily get id_token without standard button. 
+        // Wait, yes we can: we can just ask backend to verify an access_token by calling Google's userinfo endpoint.
+        console.log(tokenResponse);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    onError: error => console.error(error)
+  });
+  
+  // Wait, I will use GoogleLogin component for simplicity or adjust the backend to verify access_token. Let's adjust backend to accept access_token or use standard GoogleLogin.
+}

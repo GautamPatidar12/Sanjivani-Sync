@@ -2,18 +2,24 @@ import React, { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import Logo from './Logo.jsx';
 
-export default function Login({ onSuccess, currentHash }) {
+export default function Signup({ onSuccess, currentHash }) {
+  const [accountType, setAccountType] = useState('user'); // 'user' or 'organization'
+  const [orgType, setOrgType] = useState('hospital');
+  
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState('');
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-  const handleEmailSubmit = async (e) => {
+  const handleSignupSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      setAuthError('Please fill in both email and password.');
+    if (!name || !email || !password || !contactNumber) {
+      setAuthError('Please fill in all required fields.');
       return;
     }
 
@@ -21,15 +27,28 @@ export default function Login({ onSuccess, currentHash }) {
     setAuthError('');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const payload = {
+        name,
+        email,
+        password,
+        role: accountType === 'organization' ? 'organization' : 'requester',
+        orgType: accountType === 'organization' ? orgType : 'none',
+        contactNumber,
+        location: {
+          address: 'Unknown Address',
+          coordinates: [77.5946, 12.9716]
+        }
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.message || 'Signup failed');
       }
 
       onSuccess(data);
@@ -54,7 +73,7 @@ export default function Login({ onSuccess, currentHash }) {
         const data = await res.json();
         
         if (!res.ok) {
-          throw new Error(data.message || 'Google Login failed');
+          throw new Error(data.message || 'Google Signup failed');
         }
 
         onSuccess(data);
@@ -65,7 +84,7 @@ export default function Login({ onSuccess, currentHash }) {
       }
     },
     onError: error => {
-      setAuthError('Google Login failed');
+      setAuthError('Google Signup failed');
       console.error(error);
     }
   });
@@ -87,10 +106,10 @@ export default function Login({ onSuccess, currentHash }) {
 
         <div className="relative z-10 max-w-sm mt-12 mb-auto">
           <h2 className="text-4xl font-black leading-[1.1] tracking-tight mb-6">
-            Emergency <br/> Response <br/> <span className="text-red-200">Reimagined.</span>
+            Join The <br/> Emergency <br/> <span className="text-red-200">Network.</span>
           </h2>
           <p className="text-red-100 font-medium text-sm leading-relaxed">
-            Join the decentralized network of first responders, blood donors, and medical facilities. Faster coordination when every second counts.
+            Create an account to become a part of our decentralized network. Whether you are an individual responder or an organization, every connection matters.
           </p>
         </div>
 
@@ -118,8 +137,8 @@ export default function Login({ onSuccess, currentHash }) {
           </div>
 
           <div className="flex flex-col">
-            <h2 className="text-2xl font-black text-neutral-900 tracking-tight">Welcome back</h2>
-            <p className="text-sm text-neutral-500 mt-1 mb-8">Please enter your details to sign in.</p>
+            <h2 className="text-2xl font-black text-neutral-900 tracking-tight">Create an Account</h2>
+            <p className="text-sm text-neutral-500 mt-1 mb-8">Please enter your details to register.</p>
 
             {/* Social Login Buttons */}
             <div className="flex flex-col gap-3 mb-6">
@@ -141,8 +160,26 @@ export default function Login({ onSuccess, currentHash }) {
 
             <div className="flex items-center gap-4 mb-6">
               <div className="flex-1 h-px bg-neutral-200"></div>
-              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Or login with email</span>
+              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Or register with email</span>
               <div className="flex-1 h-px bg-neutral-200"></div>
+            </div>
+
+            {/* Toggle Account Type */}
+            <div className="flex bg-neutral-100 p-1 rounded-xl mb-6">
+              <button
+                type="button"
+                onClick={() => setAccountType('user')}
+                className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all ${accountType === 'user' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+              >
+                Normal Account
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType('organization')}
+                className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all ${accountType === 'organization' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+              >
+                Organization
+              </button>
             </div>
 
             {authError && (
@@ -151,8 +188,37 @@ export default function Login({ onSuccess, currentHash }) {
               </div>
             )}
 
-            {/* Email Login Form */}
-            <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
+            {/* Signup Form */}
+            <form onSubmit={handleSignupSubmit} className="flex flex-col gap-4">
+              
+              {accountType === 'organization' && (
+                <div className="flex flex-col gap-1.5 animate-fadeIn">
+                  <label className="text-xs font-bold text-neutral-700">Organization Type</label>
+                  <select
+                    value={orgType}
+                    onChange={(e) => setOrgType(e.target.value)}
+                    className="w-full text-sm px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all font-medium text-neutral-800 cursor-pointer"
+                  >
+                    <option value="hospital">Hospital</option>
+                    <option value="blood_bank">Blood Bank</option>
+                    <option value="hotel">Hotel / Shelter</option>
+                    <option value="vehicle_owner">Vehicle Fleet (Transport)</option>
+                    <option value="none">Other</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-neutral-700">Full Name / Organization Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="John Doe"
+                  className="w-full text-sm px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all font-medium text-neutral-800 placeholder-neutral-400"
+                />
+              </div>
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-neutral-700">Email Address</label>
                 <input
@@ -163,12 +229,20 @@ export default function Login({ onSuccess, currentHash }) {
                   className="w-full text-sm px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all font-medium text-neutral-800 placeholder-neutral-400"
                 />
               </div>
+              
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-neutral-700">Contact Number</label>
+                <input
+                  type="text"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="w-full text-sm px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all font-medium text-neutral-800 placeholder-neutral-400"
+                />
+              </div>
 
               <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-neutral-700">Password</label>
-                  <button type="button" className="text-xs font-bold text-[#d61c24] hover:text-[#b31018] transition-colors">Forgot?</button>
-                </div>
+                <label className="text-xs font-bold text-neutral-700">Password</label>
                 <input
                   type="password"
                   value={password}
@@ -186,13 +260,13 @@ export default function Login({ onSuccess, currentHash }) {
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <span>Sign In</span>
+                  <span>Sign Up</span>
                 )}
               </button>
             </form>
 
             <p className="text-center text-xs text-neutral-500 font-medium mt-8">
-              Don't have an account? <button type="button" onClick={() => window.location.hash = '#/signup'} className="text-[#d61c24] font-bold hover:underline">Sign up</button>
+              Already have an account? <button type="button" onClick={() => window.location.hash = '#/login'} className="text-[#d61c24] font-bold hover:underline">Log in</button>
             </p>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   register,
   login,
+  googleLogin,
   getProfile,
   updateProfile,
   deleteAccount,
@@ -135,6 +136,33 @@ router.post('/register', register);
  *         description: Server error
  */
 router.post('/login', login);
+
+/**
+ * @swagger
+ * /api/auth/google:
+ *   post:
+ *     summary: Login user with Google OAuth
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               credential:
+ *                 type: string
+ *                 description: Google JWT credential token
+ *     responses:
+ *       200:
+ *         description: User logged in successfully
+ *       400:
+ *         description: Invalid or missing token
+ *       500:
+ *         description: Server error
+ *     
+ */
+router.post('/google', googleLogin);
 
 /**
  * @swagger

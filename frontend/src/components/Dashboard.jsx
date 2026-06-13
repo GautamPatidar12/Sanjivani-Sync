@@ -18,7 +18,7 @@ const severityLevels = [
   { id: 'critical', title: 'Critical', desc: 'Life-threatening', color: 'border-red-500 ring-red-500/10 text-red-600 bg-red-50' }
 ];
 
-export default function Dashboard({ phone, selectedCountry, onLogout, currentHash }) {
+export default function Dashboard({ user, onLogout, currentHash }) {
   // Determine active Tab and SOS Step based on global URL hash
   let activeTab = 'home';
   let sosStep = 'type';
@@ -45,9 +45,9 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
   const [selectedFormResource, setSelectedFormResource] = useState(null);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
   const [formInputs, setFormInputs] = useState({ 
-    name: 'Bhawna', 
-    contact: (selectedCountry ? selectedCountry.code : '+91') + ' ' + (phone || '98765 43210'), 
-    address: 'Bhopal, MP', 
+    name: user?.name || 'User', 
+    contact: user?.contactNumber || '98765 43210', 
+    address: user?.location?.address || 'Unknown Address', 
     description: '', 
     urgency: 'High' 
   });
@@ -89,21 +89,71 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
   const isConfigRoute = activeTab === 'sos' && (sosStep === 'type' || sosStep === 'severity' || sosStep === 'location-contacts' || sosStep === 'processing');
 
   return (
-    <>
+    <div className="flex flex-col md:flex-row w-full h-full relative">
+      {/* Navigation Sidebar (Desktop) / Bottom Bar (Mobile) */}
+      <div className="bg-white border-t md:border-t-0 md:border-r border-neutral-100/80 px-6 md:px-0 py-2.5 md:py-8 flex md:flex-col justify-between md:justify-start items-center z-20 order-last md:order-first md:w-24 md:h-full shrink-0 md:gap-8">
+        <button
+          onClick={() => window.location.hash = '#/dashboard'}
+          type="button"
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 md:w-full ${activeTab === 'home' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
+        >
+          <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-current" viewBox="0 0 24 24">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+          </svg>
+          <span className="text-3xs font-extrabold tracking-tight">Home</span>
+        </button>
+
+        <button
+          onClick={() => window.location.hash = '#/resources'}
+          type="button"
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 md:w-full ${activeTab === 'resources' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
+        >
+          <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-current" viewBox="0 0 24 24">
+            <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
+          </svg>
+          <span className="text-3xs font-extrabold tracking-tight">Resources</span>
+        </button>
+
+        <button
+          onClick={() => {
+            window.location.hash = '#/sos/type';
+          }}
+          type="button"
+          className="relative flex flex-col items-center justify-center focus:outline-none transition-transform active:scale-95 z-30 w-16 -mt-6 md:mt-0 md:mb-2 md:w-full"
+        >
+          <div className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-[#d61c24] flex items-center justify-center text-white shadow-lg shadow-red-500/30 border-4 border-white md:border-red-50 font-extrabold text-[10px] md:text-xs tracking-wider uppercase">
+            SOS
+          </div>
+          <span className={`text-3xs font-extrabold tracking-tight mt-1 ${activeTab === 'sos' ? 'text-[#d61c24]' : 'text-neutral-400'}`}>SOS</span>
+        </button>
+
+        <button
+          onClick={() => window.location.hash = '#/profile'}
+          type="button"
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 md:w-full md:mt-auto ${activeTab === 'profile' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
+        >
+          <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-current" viewBox="0 0 24 24">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+          </svg>
+          <span className="text-3xs font-extrabold tracking-tight">Profile</span>
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Dashboard Core Header View */}
       {!isConfigRoute && (
         <div className="flex justify-between items-center px-6 pt-5 pb-3 bg-white border-b border-neutral-50/50">
           <div>
             <h2 className="text-xs font-semibold text-neutral-400 tracking-wider">Good Evening,</h2>
             <h1 className="text-xl font-extrabold text-neutral-900 flex items-center gap-1.5 mt-0.5">
-              Bhawna <span className="animate-bounce origin-bottom inline-block">👋</span>
+              {user?.name || 'User'} <span className="animate-bounce origin-bottom inline-block">👋</span>
             </h1>
             <div className="flex items-center gap-1 text-xs text-[#d61c24] mt-1.5 font-bold">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span>Bhopal, Madhya Pradesh</span>
+              <span>{user?.location?.address || 'Location Unknown'}</span>
             </div>
           </div>
           
@@ -119,8 +169,8 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
                   e.target.nextSibling.style.display = 'flex';
                 }}
               />
-              <div style={{ display: 'none' }} className="w-full h-full bg-red-100 flex items-center justify-center text-red-700 font-black text-sm">
-                BH
+              <div style={{ display: 'none' }} className="w-full h-full bg-red-100 flex items-center justify-center text-red-700 font-black text-sm uppercase">
+                {(user?.name || 'U').substring(0, 2)}
               </div>
             </div>
             <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
@@ -188,7 +238,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-5">
                   {resourceTypes.map((res) => (
                     <button
                       key={res.id}
@@ -221,8 +271,8 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
                   </button>
                 </div>
 
-                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-                  <div className="flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex items-center gap-3 w-40">
+                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 md:flex-wrap">
+                  <div className="flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex items-center gap-3 w-40 md:w-48 lg:w-56 transition-all hover:border-red-100 hover:shadow-md cursor-pointer">
                     <div className="p-2 rounded-lg bg-green-50 text-green-600">
                       <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                         <path d="M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm13-6l-1.88-5.64c-.19-.57-.72-.96-1.32-.96H8.2c-.6 0-1.13.39-1.32.96L5 9v6c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V9z" />
@@ -234,7 +284,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex items-center gap-3 w-40">
+                  <div className="flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex items-center gap-3 w-40 md:w-48 lg:w-56 transition-all hover:border-blue-100 hover:shadow-md cursor-pointer">
                     <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
                       <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                         <path d="M19 3H5c-1.1 0-1.99.9-1.99 2L3 19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
@@ -246,7 +296,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex items-center gap-3 w-40">
+                  <div className="flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex items-center gap-3 w-40 md:w-48 lg:w-56 transition-all hover:border-red-100 hover:shadow-md cursor-pointer">
                     <div className="p-2 rounded-lg bg-red-50 text-red-600">
                       <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
@@ -271,7 +321,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
               </div>
               <p className="text-xs text-neutral-400">Select an emergency category below to log a resource request or find nearby support groups:</p>
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3">
                 {resourceTypes.map((res) => (
                   <button
                     key={res.id}
@@ -453,24 +503,24 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
                     <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150" alt="Profile" className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <h3 className="text-base font-extrabold text-neutral-850">Bhawna</h3>
-                    <span className="text-xs text-neutral-400">{(selectedCountry ? selectedCountry.code : '+91')} {phone || '98765 43210'}</span>
+                    <h3 className="text-base font-extrabold text-neutral-850">{user?.name || 'User'}</h3>
+                    <span className="text-xs text-neutral-400">{user?.email || 'user@example.com'}</span>
                     <div className="text-3xs font-extrabold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full inline-block mt-1">Verified Member</div>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-2.5 pt-3 border-t border-neutral-200/50">
                   <div className="flex justify-between text-xs">
-                    <span className="text-neutral-400">Medical Group</span>
-                    <span className="font-bold text-neutral-800">O+ Positive</span>
+                    <span className="text-neutral-400">Role</span>
+                    <span className="font-bold text-neutral-800 uppercase">{user?.role || 'Requester'}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-neutral-400">Emergency Contact</span>
-                    <span className="font-bold text-neutral-800">Dr. Sanjiv (+91 99887 76655)</span>
+                    <span className="text-neutral-400">Contact Number</span>
+                    <span className="font-bold text-neutral-800">{user?.contactNumber || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-neutral-400">Address</span>
-                    <span className="font-bold text-neutral-800">Bhopal, Madhya Pradesh</span>
+                    <span className="font-bold text-neutral-800">{user?.location?.address || 'Unknown'}</span>
                   </div>
                 </div>
               </div>
@@ -488,53 +538,6 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
         </div>
       </div>
 
-      {/* Bottom Navigation Tab Bar (Syncs with Global URL hashes) */}
-      <div className="bg-white border-t border-neutral-100/80 px-6 py-2.5 flex justify-between items-center z-20">
-        <button
-          onClick={() => window.location.hash = '#/dashboard'}
-          type="button"
-          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 ${activeTab === 'home' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
-        >
-          <svg className="w-5.5 h-5.5 fill-current" viewBox="0 0 24 24">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-          </svg>
-          <span className="text-3xs font-extrabold tracking-tight">Home</span>
-        </button>
-
-        <button
-          onClick={() => window.location.hash = '#/resources'}
-          type="button"
-          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 ${activeTab === 'resources' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
-        >
-          <svg className="w-5.5 h-5.5 fill-current" viewBox="0 0 24 24">
-            <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
-          </svg>
-          <span className="text-3xs font-extrabold tracking-tight">Resources</span>
-        </button>
-
-        <button
-          onClick={() => {
-            window.location.hash = '#/sos/type';
-          }}
-          type="button"
-          className="relative flex flex-col items-center justify-center focus:outline-none transition-transform active:scale-95 z-30 w-16 -mt-6"
-        >
-          <div className="w-13 h-13 rounded-full bg-[#d61c24] flex items-center justify-center text-white shadow-lg shadow-red-500/30 border-4 border-white font-extrabold text-[10px] tracking-wider uppercase">
-            SOS
-          </div>
-          <span className={`text-3xs font-extrabold tracking-tight mt-1 ${activeTab === 'sos' ? 'text-[#d61c24]' : 'text-neutral-400'}`}>SOS</span>
-        </button>
-
-        <button
-          onClick={() => window.location.hash = '#/profile'}
-          type="button"
-          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 ${activeTab === 'profile' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
-        >
-          <svg className="w-5.5 h-5.5 fill-current" viewBox="0 0 24 24">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-          </svg>
-          <span className="text-3xs font-extrabold tracking-tight">Profile</span>
-        </button>
       </div>
 
       {/* QUICK RESOURCE DETAIL INPUT FORM OVERLAY MODAL */}
@@ -643,6 +646,6 @@ export default function Dashboard({ phone, selectedCountry, onLogout, currentHas
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import User, { IUser } from '../models/User';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 interface AuthRequest extends Request {
   user?: any;
@@ -61,84 +64,33 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, role, orgType, name, location, helpTypes, contactNumber } = req.body;
+    const { email, password } = req.body;
 
-    // Determine target email for dummy login
-    let targetEmail = email;
-    const targetRole = role || 'helper';
-    const targetOrgType = targetRole === 'organization' ? (orgType || 'hospital') : 'none';
-
-    if (!targetEmail) {
-      if (targetRole === 'organization') {
-        targetEmail = `dummy_${targetOrgType}@sanjivani.com`;
-      } else {
-        targetEmail = `dummy_${targetRole}@sanjivani.com`;
-      }
+    if (!email || !password) {
+      res.status(400).json({ message: 'Please provide email and password' });
+      return;
     }
-    targetEmail = targetEmail.toLowerCase();
+
+    const targetEmail = email.toLowerCase();
 
     // Check if user exists
-    let user = await User.findOne({ email: targetEmail });
+    const user = await User.findOne({ email: targetEmail });
 
     if (!user) {
-      // Create a dummy user dynamically if they don't exist
-      const salt = await bcrypt.genSalt(10);
-      const dummyPassword = await bcrypt.hash('dummy123', salt);
-
-      // Default coordinates centered around Bengaluru
-      let defaultCoords: [number, number] = [77.5946, 12.9716];
-      if (targetRole === 'organization') {
-        // Offset coordinates slightly to show distance separation
-        if (targetOrgType === 'hospital') defaultCoords = [77.5996, 12.9766];
-        else if (targetOrgType === 'blood_bank') defaultCoords = [77.5896, 12.9666];
-        else if (targetOrgType === 'hotel') defaultCoords = [77.6046, 12.9816];
-        else if (targetOrgType === 'vehicle_owner') defaultCoords = [77.5846, 12.9616];
-      }
-
-      // Default help types
-      let defaultHelpTypes = helpTypes || [];
-      if (!helpTypes || helpTypes.length === 0) {
-        if (targetRole === 'organization') {
-          if (targetOrgType === 'hospital' || targetOrgType === 'blood_bank') {
-            defaultHelpTypes = ['blood'];
-          } else if (targetOrgType === 'hotel') {
-            defaultHelpTypes = ['shelter', 'food'];
-          } else if (targetOrgType === 'vehicle_owner') {
-            defaultHelpTypes = ['transport'];
-          }
-        } else if (targetRole === 'helper') {
-          defaultHelpTypes = ['blood', 'food', 'shelter', 'transport'];
-        }
-      }
-
-      // Build name
-      let defaultName = name;
-      if (!defaultName) {
-        if (targetRole === 'organization') {
-          defaultName = `Dummy ${targetOrgType.charAt(0).toUpperCase() + targetOrgType.slice(1).replace('_', ' ')}`;
-        } else {
-          defaultName = `Dummy ${targetRole.charAt(0).toUpperCase() + targetRole.slice(1)}`;
-        }
-      }
-
-      user = await User.create({
-        name: defaultName,
-        email: targetEmail,
-        password: dummyPassword,
-        role: targetRole,
-        orgType: targetOrgType,
-        contactNumber: contactNumber || '9999999999',
-        location: {
-          address: location?.address || '123 Emergency St, Bengaluru',
-          coordinates: {
-            type: 'Point',
-            coordinates: location?.coordinates || defaultCoords,
-          },
-        },
-        helpTypes: defaultHelpTypes,
-        isOnline: targetRole !== 'requester', // default helpers to online
-      });
+      res.status(401).json({ message: 'Invalid credentials' });
+      return;
     }
+
+    // Verify password
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      res.status(401).json({ message: 'Invalid credentials' });
+      return;
+    }
+
+    // Determine default helpTypes and coordinates to ensure no undefined crashes on frontend
+    const defaultCoords: [number, number] = [77.5946, 12.9716];
 
     res.json({
       _id: user._id,
@@ -147,8 +99,78 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       role: user.role,
       orgType: user.orgType,
       isOnline: user.isOnline,
-      helpTypes: user.helpTypes,
-      location: user.location,
+      helpTypes: user.helpTypes || [],
+      location: user.location || { address: 'Unknown', coordinates: { type: 'Point', coordinates: defaultCoords } },
+      token: generateToken(user._id.toString()),
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const googleLogin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { credential } = req.body; // Actually this will now be the access_token
+    
+    if (!credential) {
+      res.status(400).json({ message: 'Missing Google credential token' });
+      return;
+    }
+
+    // Verify access token by fetching user profile from Google
+    const googleResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${credential}` }
+    });
+
+    if (!googleResponse.ok) {
+      res.status(400).json({ message: 'Invalid Google access token' });
+      return;
+    }
+
+    const payload = await googleResponse.json();
+
+    if (!payload || !payload.email) {
+      res.status(400).json({ message: 'Invalid Google token payload' });
+      return;
+    }
+
+    const targetEmail = payload.email.toLowerCase();
+    let user = await User.findOne({ email: targetEmail });
+
+    if (!user) {
+      // Create user if not exists
+      const salt = await bcrypt.genSalt(10);
+      const randomPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), salt);
+
+      user = await User.create({
+        name: payload.name || 'Google User',
+        email: targetEmail,
+        password: randomPassword,
+        role: 'requester', // default role
+        orgType: 'none',
+        contactNumber: '0000000000', // default fallback
+        location: {
+          address: 'Unknown Address',
+          coordinates: {
+            type: 'Point',
+            coordinates: [77.5946, 12.9716],
+          },
+        },
+        helpTypes: [],
+      });
+    }
+
+    const defaultCoords: [number, number] = [77.5946, 12.9716];
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      orgType: user.orgType,
+      isOnline: user.isOnline,
+      helpTypes: user.helpTypes || [],
+      location: user.location || { address: 'Unknown', coordinates: { type: 'Point', coordinates: defaultCoords } },
       token: generateToken(user._id.toString()),
     });
   } catch (error: any) {
