@@ -102,17 +102,6 @@ export default function RequestProcessing({
         console.error('API Error:', err);
         setStepStates(prev => ({ ...prev, received: 'error' }));
         setErrorMessage(err.message || 'Connection failed.');
-        
-        // Fallback simulation for offline/local-only testing
-        setTimeout(() => {
-          setStepStates({
-            received: 'success',
-            matching: 'loading',
-            finding: 'idle',
-            notifying: 'idle',
-          });
-          simulateOfflineSuccess();
-        }, 1500);
       }
     };
 
@@ -171,39 +160,7 @@ export default function RequestProcessing({
     };
   }, [createdRequestId, user?.token]);
 
-  // Offline/Fallback simulation so developers/users can test the UI transitions without launching a helper client
-  const simulateOfflineSuccess = () => {
-    // Step 2 completes
-    setTimeout(() => {
-      setStepStates(prev => ({ 
-        ...prev, 
-        matching: 'success',
-        finding: 'loading'
-      }));
-      
-      // Step 3 completes
-      setTimeout(() => {
-        setStepStates(prev => ({ 
-          ...prev, 
-          finding: 'success',
-          notifying: 'loading'
-        }));
-        
-        // Step 4 completes & directs
-        setTimeout(() => {
-          setStepStates(prev => ({ 
-            ...prev, 
-            notifying: 'success'
-          }));
-          setTimeout(() => {
-            onComplete();
-          }, 800);
-        }, 1500);
-
-      }, 1500);
-
-    }, 2000);
-  };
+  // No offline fallback - wait for real response
 
   // 3. Cancel Help Request
   const handleCancelRequest = async () => {
