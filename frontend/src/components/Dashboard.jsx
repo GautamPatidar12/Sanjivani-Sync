@@ -111,7 +111,19 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     name: user?.name || '',
     contactNumber: user?.contactNumber || '',
     address: user?.location?.address || '',
+    emergencyContacts: user?.emergencyContacts || []
   });
+
+  useEffect(() => {
+    if (isEditingProfile) {
+      setEditProfileForm({
+        name: user?.name || '',
+        contactNumber: user?.contactNumber || '',
+        address: user?.location?.address || '',
+        emergencyContacts: user?.emergencyContacts || []
+      });
+    }
+  }, [isEditingProfile, user]);
 
   // Fetch providers when category is selected
   useEffect(() => {
@@ -164,7 +176,8 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         body: JSON.stringify({
           name: editProfileForm.name,
           contactNumber: editProfileForm.contactNumber,
-          location: { address: editProfileForm.address }
+          location: { address: editProfileForm.address },
+          emergencyContacts: editProfileForm.emergencyContacts
         })
       });
       if (response.ok) {
@@ -545,6 +558,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                 {/* SUBSTEP 3: LOCATION & CONTACTS CONFIRMATION */}
                 {sosStep === 'location-contacts' && (
                   <LocationContacts
+                    user={user}
                     onBack={() => window.location.hash = '#/sos/severity'}
                     onConfirm={(contacts) => {
                       setActiveContacts(contacts);
@@ -629,12 +643,45 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                       <span className="font-bold text-neutral-800">{user?.location?.address || 'Unknown'}</span>
                     </div>
                   </div>
+
+                  {/* Emergency Contacts Section */}
+                  <div className="bg-neutral-50 rounded-2xl border border-neutral-100 p-4 mt-2">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-sm font-extrabold text-neutral-800">Emergency Contacts</h3>
+                      <button 
+                        onClick={() => setIsEditingProfile(true)}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-700 focus:outline-none"
+                      >
+                        Manage
+                      </button>
+                    </div>
+                    {user?.emergencyContacts?.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {user.emergencyContacts.map((contact, idx) => (
+                          <div key={idx} className="flex justify-between items-center p-2.5 bg-white rounded-xl border border-neutral-100">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs uppercase">
+                                {contact.name.substring(0, 2)}
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-bold text-neutral-800">{contact.name}</h4>
+                                <span className="text-3xs text-neutral-500">{contact.relation} • {contact.phone}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-neutral-400 italic">No emergency contacts added yet.</p>
+                    )}
+                  </div>
+
                 </div>
 
                 <button
                   onClick={onLogout}
                   type="button"
-                  className="mt-6 border border-red-200 text-[#d61c24] hover:bg-red-50 font-bold py-3 rounded-xl text-xs transition-colors"
+                  className="mt-2 border border-red-200 text-[#d61c24] hover:bg-red-50 font-bold py-3 rounded-xl text-xs transition-colors w-full"
                 >
                   Logout Account
                 </button>
@@ -834,6 +881,127 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PROFILE / EMERGENCY CONTACTS MODAL */}
+      {isEditingProfile && (
+        <div className="fixed inset-0 bg-neutral-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm max-h-[90vh] overflow-y-auto bg-white rounded-3xl border border-neutral-100 shadow-2xl p-6 relative flex flex-col scale-up-animation no-scrollbar">
+            
+            <button
+              onClick={() => setIsEditingProfile(false)}
+              className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-full transition-colors focus:outline-none"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h3 className="text-lg font-extrabold text-neutral-800 mb-4">Edit Profile</h3>
+
+            <form onSubmit={handleUpdateProfile} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editProfileForm.name}
+                  onChange={(e) => setEditProfileForm({ ...editProfileForm, name: e.target.value })}
+                  className="w-full text-xs font-semibold px-3 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-blue-500 text-neutral-800"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Contact Number</label>
+                <input
+                  type="text"
+                  required
+                  value={editProfileForm.contactNumber}
+                  onChange={(e) => setEditProfileForm({ ...editProfileForm, contactNumber: e.target.value })}
+                  className="w-full text-xs font-semibold px-3 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-blue-500 text-neutral-800"
+                />
+              </div>
+
+              <div className="mt-2 pt-4 border-t border-neutral-100">
+                <h4 className="text-sm font-extrabold text-neutral-800 mb-2">Emergency Contacts</h4>
+                
+                <div className="flex flex-col gap-3">
+                  {editProfileForm.emergencyContacts.map((contact, idx) => (
+                    <div key={idx} className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...editProfileForm.emergencyContacts];
+                          updated.splice(idx, 1);
+                          setEditProfileForm({ ...editProfileForm, emergencyContacts: updated });
+                        }}
+                        className="absolute top-2 right-2 text-red-500 p-1 hover:bg-red-50 rounded-full"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                      
+                      <div className="flex flex-col gap-2 mt-1">
+                        <input
+                          type="text" placeholder="Name" required
+                          value={contact.name}
+                          onChange={(e) => {
+                            const updated = [...editProfileForm.emergencyContacts];
+                            updated[idx].name = e.target.value;
+                            setEditProfileForm({ ...editProfileForm, emergencyContacts: updated });
+                          }}
+                          className="w-full text-xs font-semibold px-2 py-1.5 bg-white rounded-lg border border-neutral-200 focus:outline-none"
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text" placeholder="Relation (e.g. Father)" required
+                            value={contact.relation}
+                            onChange={(e) => {
+                              const updated = [...editProfileForm.emergencyContacts];
+                              updated[idx].relation = e.target.value;
+                              setEditProfileForm({ ...editProfileForm, emergencyContacts: updated });
+                            }}
+                            className="w-1/2 text-xs font-semibold px-2 py-1.5 bg-white rounded-lg border border-neutral-200 focus:outline-none"
+                          />
+                          <input
+                            type="text" placeholder="Phone" required
+                            value={contact.phone}
+                            onChange={(e) => {
+                              const updated = [...editProfileForm.emergencyContacts];
+                              updated[idx].phone = e.target.value;
+                              setEditProfileForm({ ...editProfileForm, emergencyContacts: updated });
+                            }}
+                            className="w-1/2 text-xs font-semibold px-2 py-1.5 bg-white rounded-lg border border-neutral-200 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditProfileForm({
+                        ...editProfileForm,
+                        emergencyContacts: [...editProfileForm.emergencyContacts, { name: '', relation: '', phone: '', selected: true, avatar: '' }]
+                      });
+                    }}
+                    className="flex items-center justify-center gap-1.5 py-2 border border-dashed border-neutral-300 rounded-xl text-xs font-bold text-neutral-500 hover:text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    Add Contact
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isUpdatingProfile}
+                className="mt-4 w-full bg-[#1e50bb] hover:bg-[#1a449d] text-white py-3 rounded-xl font-bold transition-all text-xs shadow-md"
+              >
+                {isUpdatingProfile ? 'Saving...' : 'Save Profile Changes'}
+              </button>
+            </form>
           </div>
         </div>
       )}

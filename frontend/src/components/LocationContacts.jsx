@@ -1,15 +1,7 @@
 import React, { useState } from 'react';
 
-const mockContacts = [
-  { name: 'Dr. Sanjiv (On-duty Responder)', relation: 'Doctor / Primary', phone: '+91 99887 76655', selected: true, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80' },
-  { name: 'Rajesh Kumar', relation: 'Father', phone: '+91 98765 00001', selected: true, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80' },
-  { name: 'Sunita Sharma', relation: 'Mother', phone: '+91 98765 00002', selected: true, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80' },
-  { name: 'Amit Kumar', relation: 'Brother', phone: '+91 98765 00003', selected: false, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80' },
-  { name: 'Pooja Sharma', relation: 'Sister', phone: '+91 98765 00004', selected: false, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80' }
-];
-
-export default function LocationContacts({ onBack, onConfirm }) {
-  const [contacts, setContacts] = useState(mockContacts);
+export default function LocationContacts({ user, onBack, onConfirm }) {
+  const [contacts, setContacts] = useState(user?.emergencyContacts || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const selectedContacts = contacts.filter(c => c.selected);
@@ -111,18 +103,20 @@ export default function LocationContacts({ onBack, onConfirm }) {
           {/* Contact photo avatars row */}
           <div className="flex items-center gap-2 pl-15">
             {selectedContacts.map((contact, idx) => (
-              <div key={idx} className="relative w-8 h-8 rounded-full overflow-hidden border border-white ring-2 ring-neutral-100">
-                <img 
-                  src={contact.avatar} 
-                  alt={contact.name} 
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-                <div style={{ display: 'none' }} className="w-full h-full bg-red-150 text-red-700 flex items-center justify-center text-3xs font-extrabold">
-                  {contact.name.substring(0, 2).toUpperCase()}
+              <div key={idx} className="relative w-8 h-8 rounded-full overflow-hidden border border-white ring-2 ring-neutral-100 bg-red-150 flex items-center justify-center">
+                {contact.avatar ? (
+                  <img 
+                    src={contact.avatar} 
+                    alt={contact.name} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div style={{ display: contact.avatar ? 'none' : 'flex' }} className="w-full h-full text-red-700 flex items-center justify-center text-3xs font-extrabold uppercase bg-red-100">
+                  {contact.name.substring(0, 2)}
                 </div>
               </div>
             ))}
@@ -132,6 +126,10 @@ export default function LocationContacts({ onBack, onConfirm }) {
               <div className="w-8 h-8 rounded-full bg-neutral-100 border border-white ring-2 ring-neutral-100 flex items-center justify-center text-xs font-bold text-neutral-600">
                 +{contacts.length - selectedContacts.length}
               </div>
+            )}
+            
+            {contacts.length === 0 && (
+              <div className="text-3xs text-neutral-400 italic">No emergency contacts configured. Update your profile.</div>
             )}
           </div>
         </button>
@@ -182,18 +180,20 @@ export default function LocationContacts({ onBack, onConfirm }) {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full overflow-hidden border border-neutral-200">
-                      <img 
-                        src={contact.avatar} 
-                        alt={contact.name} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                      />
-                      <div style={{ display: 'none' }} className="w-full h-full bg-red-100 text-red-700 flex items-center justify-center text-3xs font-extrabold">
-                        {contact.name.substring(0, 2).toUpperCase()}
+                    <div className="w-9 h-9 rounded-full overflow-hidden border border-neutral-200 bg-red-100 flex items-center justify-center">
+                      {contact.avatar ? (
+                        <img 
+                          src={contact.avatar} 
+                          alt={contact.name} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div style={{ display: contact.avatar ? 'none' : 'flex' }} className="w-full h-full text-red-700 flex items-center justify-center text-3xs font-extrabold uppercase">
+                        {contact.name.substring(0, 2)}
                       </div>
                     </div>
                     <div>
