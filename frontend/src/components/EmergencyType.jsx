@@ -71,12 +71,12 @@ export default function EmergencyType({ onBack, onContinue }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between h-full overflow-y-auto no-scrollbar pb-6">
-      
+    <div className="flex-1 flex flex-col justify-between max-w-xl mx-auto w-full md:bg-white/60 md:backdrop-blur-xl md:border md:border-neutral-100/60 md:shadow-xl md:shadow-neutral-250/20 md:rounded-3xl md:p-8">
+
       {/* Top back button, header texts and graphics */}
       <div>
         <div className="flex justify-between items-start gap-4">
-          <button 
+          <button
             onClick={onBack}
             className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-800 transition-colors focus:outline-none"
           >
@@ -84,7 +84,7 @@ export default function EmergencyType({ onBack, onContinue }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7 7-7" />
             </svg>
           </button>
-          
+
           {/* Vector illustration of ambulance and map pin */}
           <div className="flex-shrink-0">
             <svg viewBox="0 0 120 80" className="w-24 h-16">
@@ -136,7 +136,7 @@ export default function EmergencyType({ onBack, onContinue }) {
                     <span className="text-3xs text-neutral-400 font-medium leading-none">{option.description}</span>
                   </div>
                 </div>
-                
+
                 {/* Arrow chevron symbol */}
                 <svg className={`w-4 h-4 transition-colors ${isSelected ? 'text-[#d61c24]' : 'text-neutral-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -149,7 +149,7 @@ export default function EmergencyType({ onBack, onContinue }) {
 
       {/* Trust privacy badge and Continue call button */}
       <div className="flex flex-col gap-4 mt-6">
-        
+
         {/* Your safety is our priority banner */}
         <div className="bg-green-50/50 rounded-2xl border border-green-100 p-4 flex items-start gap-3.5">
           <div className="bg-green-100/70 p-2 rounded-full mt-0.5 text-green-600 flex-shrink-0">
@@ -170,11 +170,10 @@ export default function EmergencyType({ onBack, onContinue }) {
           onClick={handleContinue}
           disabled={!selectedId}
           type="button"
-          className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-3 transition-all duration-300 shadow-md ${
-            selectedId 
-              ? 'bg-[#d61c24] hover:bg-[#b31018] text-white shadow-red-500/10 cursor-pointer active:scale-[0.98]' 
+          className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-3 transition-all duration-300 shadow-md ${selectedId
+              ? 'bg-[#d61c24] hover:bg-[#b31018] text-white shadow-red-500/10 cursor-pointer active:scale-[0.98]'
               : 'bg-neutral-100 text-neutral-400 cursor-not-allowed shadow-none'
-          }`}
+            }`}
         >
           {/* Phone call icon */}
           <div className={`p-1 rounded-full ${selectedId ? 'bg-red-800' : 'bg-neutral-200'} flex items-center justify-center`}>
