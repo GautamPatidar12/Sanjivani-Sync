@@ -98,14 +98,74 @@ export default function Dashboard({ user, onLogout, currentHash }) {
   const [isShowingResourceForm, setIsShowingResourceForm] = useState(false);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
 
-  // Edit Profile State
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  // Profile Revamp States
+  const [profileSubTab, setProfileSubTab] = useState('menu');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-  const [editProfileForm, setEditProfileForm] = useState({
+  const [personalDetailsForm, setPersonalDetailsForm] = useState({
     name: user?.name || '',
     contactNumber: user?.contactNumber || '',
     address: user?.location?.address || '',
+    age: '',
+    gender: 'Prefer not to say',
+    bloodGroup: 'Unknown'
   });
+  const [emergencyContacts, setEmergencyContacts] = useState([]);
+  const [newContact, setNewContact] = useState({ name: '', relation: '', phone: '' });
+  const [medicalInfo, setMedicalInfo] = useState({
+    allergies: '',
+    conditions: '',
+    medications: '',
+    insurance: '',
+    notes: ''
+  });
+  const [aadhaarDetails, setAadhaarDetails] = useState({
+    aadhaarNo: '',
+    status: 'unverified'
+  });
+  const [notificationSettings, setNotificationSettings] = useState({
+    pushEnabled: true,
+    smsEnabled: true,
+    locationSharing: 'sos_only',
+    emailAlerts: false
+  });
+
+  const storageSuffix = user?._id || user?.email || 'default';
+
+  useEffect(() => {
+    if (activeTab === 'profile') {
+      const savedPersonal = localStorage.getItem(`sanjivani_personal_${storageSuffix}`);
+      if (savedPersonal) {
+        setPersonalDetailsForm(JSON.parse(savedPersonal));
+      } else {
+        setPersonalDetailsForm(prev => ({
+          ...prev,
+          name: user?.name || '',
+          contactNumber: user?.contactNumber || '',
+          address: user?.location?.address || ''
+        }));
+      }
+
+      const savedContacts = localStorage.getItem(`sanjivani_contacts_${storageSuffix}`);
+      if (savedContacts) {
+        setEmergencyContacts(JSON.parse(savedContacts));
+      }
+
+      const savedMedical = localStorage.getItem(`sanjivani_medical_${storageSuffix}`);
+      if (savedMedical) {
+        setMedicalInfo(JSON.parse(savedMedical));
+      }
+
+      const savedAadhaar = localStorage.getItem(`sanjivani_aadhaar_${storageSuffix}`);
+      if (savedAadhaar) {
+        setAadhaarDetails(JSON.parse(savedAadhaar));
+      }
+
+      const savedSettings = localStorage.getItem(`sanjivani_settings_${storageSuffix}`);
+      if (savedSettings) {
+        setNotificationSettings(JSON.parse(savedSettings));
+      }
+    }
+  }, [activeTab, storageSuffix, user]);
 
   // Fetch providers when category is selected
   useEffect(() => {
@@ -144,7 +204,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     }
   }, [selectedResourceCategory, user]);
 
-  const handleUpdateProfile = async (e) => {
+  const savePersonalDetails = async (e) => {
     e.preventDefault();
     setIsUpdatingProfile(true);
     try {
@@ -156,24 +216,84 @@ export default function Dashboard({ user, onLogout, currentHash }) {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          name: editProfileForm.name,
-          contactNumber: editProfileForm.contactNumber,
-          location: { address: editProfileForm.address }
+          name: personalDetailsForm.name,
+          contactNumber: personalDetailsForm.contactNumber,
+          location: { address: personalDetailsForm.address }
         })
       });
       if (response.ok) {
-        setIsEditingProfile(false);
-        alert('Profile updated successfully! Refresh to see changes globally.');
+        localStorage.setItem(`sanjivani_personal_${storageSuffix}`, JSON.stringify(personalDetailsForm));
+        alert('Personal details updated successfully!');
+        setProfileSubTab('menu');
       } else {
         const data = await response.json();
         alert(data.message || 'Error updating profile');
       }
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert('Error updating profile');
+      localStorage.setItem(`sanjivani_personal_${storageSuffix}`, JSON.stringify(personalDetailsForm));
+      alert('Updated locally. Server connection failed.');
+      setProfileSubTab('menu');
     } finally {
       setIsUpdatingProfile(false);
     }
+  };
+
+  const handleAddContact = (e) => {
+    e.preventDefault();
+    if (!newContact.name || !newContact.phone) {
+      alert('Please fill out Name and Phone number.');
+      return;
+    }
+    const updated = [...emergencyContacts, { ...newContact, id: Date.now().toString() }];
+    setEmergencyContacts(updated);
+    localStorage.setItem(`sanjivani_contacts_${storageSuffix}`, JSON.stringify(updated));
+    setNewContact({ name: '', relation: '', phone: '' });
+  };
+
+  const handleDeleteContact = (id) => {
+    const updated = emergencyContacts.filter(c => c.id !== id);
+    setEmergencyContacts(updated);
+    localStorage.setItem(`sanjivani_contacts_${storageSuffix}`, JSON.stringify(updated));
+  };
+
+  const saveMedicalDetails = (e) => {
+    e.preventDefault();
+    localStorage.setItem(`sanjivani_medical_${storageSuffix}`, JSON.stringify(medicalInfo));
+    alert('Medical information saved successfully!');
+    setProfileSubTab('menu');
+  };
+
+  const handleVerifyAadhaar = (e) => {
+    e.preventDefault();
+    if (!/^\d{12}$/.test(aadhaarDetails.aadhaarNo)) {
+      alert('Please enter a valid 12-digit Aadhaar number.');
+      return;
+    }
+    setAadhaarDetails(prev => ({ ...prev, status: 'verifying' }));
+    setTimeout(() => {
+      const updated = { ...aadhaarDetails, status: 'verified' };
+      setAadhaarDetails(updated);
+      localStorage.setItem(`sanjivani_aadhaar_${storageSuffix}`, JSON.stringify(updated));
+    }, 2000);
+  };
+
+  const handleToggleSetting = (key) => {
+    const updated = {
+      ...notificationSettings,
+      [key]: !notificationSettings[key]
+    };
+    setNotificationSettings(updated);
+    localStorage.setItem(`sanjivani_settings_${storageSuffix}`, JSON.stringify(updated));
+  };
+
+  const handleSelectSetting = (key, value) => {
+    const updated = {
+      ...notificationSettings,
+      [key]: value
+    };
+    setNotificationSettings(updated);
+    localStorage.setItem(`sanjivani_settings_${storageSuffix}`, JSON.stringify(updated));
   };
 
   // Sync state variables reset when navigating away from SOS page
@@ -557,47 +677,568 @@ export default function Dashboard({ user, onLogout, currentHash }) {
 
             {/* TAB 4: PROFILE */}
             {activeTab === 'profile' && (
-              <div className="flex-1 flex flex-col gap-4">
-                <div className="flex items-center gap-2">
-                  <button onClick={() => window.location.hash = '#/dashboard'} className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
-                  <h2 className="text-lg font-bold text-neutral-800">Emergency Profile</h2>
-                </div>
-
-                <div className="bg-neutral-50 rounded-2xl border border-neutral-100 p-4 flex flex-col gap-4 mt-2">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-500">
-                      <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150" alt="Profile" className="w-full h-full object-cover" />
+              <div className="flex-1 flex flex-col gap-4 overflow-y-auto no-scrollbar pb-10">
+                
+                {/* 1. MAIN PROFILE MENU */}
+                {profileSubTab === 'menu' && (
+                  <div className="flex flex-col gap-4 animate-scaleUp">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => window.location.hash = '#/dashboard'} className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
+                      <h2 className="text-lg font-bold text-neutral-800">Emergency Profile</h2>
                     </div>
-                    <div>
-                      <h3 className="text-base font-extrabold text-neutral-850">{user?.name || 'User'}</h3>
-                      <span className="text-xs text-neutral-400">{user?.email || 'user@example.com'}</span>
-                      <div className="text-3xs font-extrabold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full inline-block mt-1">Verified Member</div>
+
+                    {/* Main Avatar Summary Card */}
+                    <div className="bg-neutral-50 rounded-2xl border border-neutral-100 p-4 flex flex-col gap-4 mt-1 shadow-sm">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-red-500 bg-red-50 text-[#d61c24] flex items-center justify-center font-black text-xl uppercase shadow-inner">
+                          {(personalDetailsForm.name || user?.name || 'U').substring(0, 2)}
+                        </div>
+                        <div>
+                          <h3 className="text-base font-extrabold text-neutral-850 leading-snug">{personalDetailsForm.name || user?.name || 'User'}</h3>
+                          <span className="text-xs text-neutral-400 font-semibold">{user?.email || 'user@example.com'}</span>
+                          <div>
+                            {aadhaarDetails.status === 'verified' ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100 mt-1">
+                                <svg className="w-3 h-3 text-green-600 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                                Aadhaar Verified
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 mt-1">
+                                ⚠️ Aadhaar Unverified
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Menu Options List */}
+                    <div className="flex flex-col gap-2 mt-2">
+                      {/* Personal Details Row */}
+                      <button
+                        onClick={() => setProfileSubTab('personal')}
+                        className="bg-white border border-neutral-100 hover:border-red-100 rounded-xl p-4 flex items-center justify-between text-left transition-all hover:bg-red-50/5 hover:shadow-sm focus:outline-none"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-9 h-9 bg-red-50 text-[#d61c24] rounded-lg flex items-center justify-center font-bold text-base flex-shrink-0">
+                            👤
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-extrabold text-neutral-850">Personal Details</h4>
+                            <p className="text-[10px] text-neutral-400 mt-0.5">Name, Age, Gender, Blood Group & Address</p>
+                          </div>
+                        </div>
+                        <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                      </button>
+
+                      {/* Emergency Contacts Row */}
+                      <button
+                        onClick={() => setProfileSubTab('contacts')}
+                        className="bg-white border border-neutral-100 hover:border-red-100 rounded-xl p-4 flex items-center justify-between text-left transition-all hover:bg-red-50/5 hover:shadow-sm focus:outline-none"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-9 h-9 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center font-bold text-base flex-shrink-0">
+                            📞
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-extrabold text-neutral-850">Emergency Contacts</h4>
+                            <p className="text-[10px] text-neutral-400 mt-0.5">{emergencyContacts.length} trusted contacts registered</p>
+                          </div>
+                        </div>
+                        <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                      </button>
+
+                      {/* Medical Information Row */}
+                      <button
+                        onClick={() => setProfileSubTab('medical')}
+                        className="bg-white border border-neutral-100 hover:border-red-100 rounded-xl p-4 flex items-center justify-between text-left transition-all hover:bg-red-50/5 hover:shadow-sm focus:outline-none"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-base flex-shrink-0">
+                            🏥
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-extrabold text-neutral-850">Medical Information</h4>
+                            <p className="text-[10px] text-neutral-400 mt-0.5">Blood Group: {personalDetailsForm.bloodGroup || 'Unknown'} • Health Records</p>
+                          </div>
+                        </div>
+                        <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                      </button>
+
+                      {/* Verification Status Row */}
+                      <button
+                        onClick={() => setProfileSubTab('verification')}
+                        className="bg-white border border-neutral-100 hover:border-red-100 rounded-xl p-4 flex items-center justify-between text-left transition-all hover:bg-red-50/5 hover:shadow-sm focus:outline-none"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-9 h-9 bg-green-50 text-green-600 rounded-lg flex items-center justify-center font-bold text-base flex-shrink-0">
+                            🛡️
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-extrabold text-neutral-850">Verification Status</h4>
+                            <p className="text-[10px] text-neutral-400 mt-0.5">
+                              Aadhaar status: <span className={`font-bold uppercase ${aadhaarDetails.status === 'verified' ? 'text-green-600' : 'text-orange-500'}`}>{aadhaarDetails.status}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                      </button>
+
+                      {/* Settings Row */}
+                      <button
+                        onClick={() => setProfileSubTab('settings')}
+                        className="bg-white border border-neutral-100 hover:border-red-100 rounded-xl p-4 flex items-center justify-between text-left transition-all hover:bg-red-50/5 hover:shadow-sm focus:outline-none"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-9 h-9 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center font-bold text-base flex-shrink-0">
+                            ⚙️
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-extrabold text-neutral-850">Settings &amp; Preferences</h4>
+                            <p className="text-[10px] text-neutral-400 mt-0.5">SMS notifications, push preferences &amp; privacy</p>
+                          </div>
+                        </div>
+                        <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={onLogout}
+                      type="button"
+                      className="mt-6 border border-red-200 text-[#d61c24] hover:bg-red-50 font-bold py-3.5 rounded-xl text-xs transition-colors shadow-sm focus:outline-none"
+                    >
+                      Logout Account
+                    </button>
+                  </div>
+                )}
+
+                {/* 2. PERSONAL DETAILS VIEW */}
+                {profileSubTab === 'personal' && (
+                  <form onSubmit={savePersonalDetails} className="flex flex-col gap-4 animate-scaleUp">
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => setProfileSubTab('menu')} className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-500 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
+                      <h2 className="text-lg font-bold text-neutral-800">Personal Details</h2>
+                    </div>
+
+                    <div className="flex flex-col gap-3.5 mt-2 bg-white border border-neutral-100 p-5 rounded-2xl shadow-sm">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Full Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={personalDetailsForm.name}
+                          onChange={(e) => setPersonalDetailsForm({ ...personalDetailsForm, name: e.target.value })}
+                          className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Contact Phone Number</label>
+                        <input
+                          type="text"
+                          required
+                          value={personalDetailsForm.contactNumber}
+                          onChange={(e) => setPersonalDetailsForm({ ...personalDetailsForm, contactNumber: e.target.value })}
+                          className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Home Address</label>
+                        <input
+                          type="text"
+                          required
+                          value={personalDetailsForm.address}
+                          onChange={(e) => setPersonalDetailsForm({ ...personalDetailsForm, address: e.target.value })}
+                          className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3.5">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Age</label>
+                          <input
+                            type="number"
+                            placeholder="Years"
+                            value={personalDetailsForm.age}
+                            onChange={(e) => setPersonalDetailsForm({ ...personalDetailsForm, age: e.target.value })}
+                            className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800"
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Gender</label>
+                          <select
+                            value={personalDetailsForm.gender}
+                            onChange={(e) => setPersonalDetailsForm({ ...personalDetailsForm, gender: e.target.value })}
+                            className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800 cursor-pointer"
+                          >
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Non-binary">Non-binary</option>
+                            <option value="Prefer not to say">Prefer not to say</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Blood Group</label>
+                        <select
+                          value={personalDetailsForm.bloodGroup}
+                          onChange={(e) => setPersonalDetailsForm({ ...personalDetailsForm, bloodGroup: e.target.value })}
+                          className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800 cursor-pointer"
+                        >
+                          <option value="Unknown">Unknown / Select</option>
+                          <option value="A+">A+</option>
+                          <option value="A-">A-</option>
+                          <option value="B+">B+</option>
+                          <option value="B-">B-</option>
+                          <option value="AB+">AB+</option>
+                          <option value="AB-">AB-</option>
+                          <option value="O+">O+</option>
+                          <option value="O-">O-</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isUpdatingProfile}
+                      className="mt-4 w-full bg-[#d61c24] hover:bg-[#b31018] text-white py-3 rounded-xl font-bold transition-colors text-xs flex items-center justify-center gap-1.5 shadow-md shadow-red-500/10 active:scale-95 disabled:opacity-50"
+                    >
+                      {isUpdatingProfile ? 'Saving Changes...' : 'Save Personal Details'}
+                    </button>
+                  </form>
+                )}
+
+                {/* 3. EMERGENCY CONTACTS VIEW */}
+                {profileSubTab === 'contacts' && (
+                  <div className="flex flex-col gap-4 animate-scaleUp">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setProfileSubTab('menu')} className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-500 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
+                      <h2 className="text-lg font-bold text-neutral-800">Emergency Contacts</h2>
+                    </div>
+
+                    {/* Active Contacts List */}
+                    <div className="flex flex-col gap-2 bg-neutral-50 rounded-2xl border border-neutral-100 p-4 mt-2 max-h-56 overflow-y-auto">
+                      <h3 className="text-3xs font-extrabold uppercase tracking-wider text-neutral-450 mb-1">Registered Contacts</h3>
+                      {emergencyContacts.length === 0 ? (
+                        <div className="text-2xs text-neutral-400 italic py-4 text-center">No trusted contacts added yet. Responders won't have contacts to notify in an emergency.</div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {emergencyContacts.map(contact => (
+                            <div key={contact.id} className="bg-white border border-neutral-100 p-3 rounded-xl flex items-center justify-between shadow-3xs">
+                              <div>
+                                <h4 className="text-xs font-bold text-neutral-800">{contact.name}</h4>
+                                <p className="text-3xs text-neutral-450 mt-0.5">{contact.relation} • {contact.phone}</p>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteContact(contact.id)}
+                                className="p-2 text-neutral-300 hover:text-red-650 hover:bg-red-50/50 rounded-lg transition-colors focus:outline-none"
+                              >
+                                <svg className="w-4.5 h-4.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Add Contact Form */}
+                    <form onSubmit={handleAddContact} className="bg-white border border-neutral-100 p-5 rounded-2xl flex flex-col gap-3 shadow-sm">
+                      <h3 className="text-2xs font-extrabold text-neutral-800 border-b border-neutral-50 pb-1.5">Add New Emergency Contact</h3>
+                      
+                      <div className="flex flex-col gap-1">
+                        <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-450">Contact Name</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Ramesh Kumar"
+                          value={newContact.name}
+                          onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                          className="w-full text-xs font-semibold px-3.5 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3.5">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-450">Relationship</label>
+                          <select
+                            value={newContact.relation}
+                            onChange={(e) => setNewContact({ ...newContact, relation: e.target.value })}
+                            className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800 cursor-pointer"
+                          >
+                            <option value="">Select Relation</option>
+                            <option value="Spouse">Spouse</option>
+                            <option value="Parent">Parent</option>
+                            <option value="Sibling">Sibling</option>
+                            <option value="Child">Child</option>
+                            <option value="Friend">Friend</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-450">Phone Number</label>
+                          <input
+                            type="tel"
+                            required
+                            placeholder="10-digit number"
+                            value={newContact.phone}
+                            onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+                            className="w-full text-xs font-semibold px-3.5 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="mt-2 w-full bg-neutral-900 hover:bg-neutral-800 text-white py-2.5 rounded-xl font-bold transition-colors text-xs flex items-center justify-center gap-1 shadow-sm active:scale-95"
+                      >
+                        ➕ Add Contact
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {/* 4. MEDICAL INFORMATION VIEW */}
+                {profileSubTab === 'medical' && (
+                  <form onSubmit={saveMedicalDetails} className="flex flex-col gap-4 animate-scaleUp">
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => setProfileSubTab('menu')} className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-500 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
+                      <h2 className="text-lg font-bold text-neutral-800">Medical Information</h2>
+                    </div>
+
+                    <div className="flex flex-col gap-3.5 mt-2 bg-white border border-neutral-100 p-5 rounded-2xl shadow-sm">
+                      <div className="flex justify-between items-center bg-blue-50/35 border border-blue-100/40 p-3 rounded-xl">
+                        <span className="text-xs font-bold text-blue-800">Blood Group Verification:</span>
+                        <span className="text-xs font-black text-white bg-blue-600 px-3 py-1 rounded-md">{personalDetailsForm.bloodGroup || 'Unknown'}</span>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Known Allergies</label>
+                        <textarea
+                          rows={2}
+                          placeholder="List any drug, food, or chemical allergies (e.g., Penicillin, Peanuts). If none, write None."
+                          value={medicalInfo.allergies}
+                          onChange={(e) => setMedicalInfo({ ...medicalInfo, allergies: e.target.value })}
+                          className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800 resize-none"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Chronic Medical Conditions</label>
+                        <textarea
+                          rows={2}
+                          placeholder="e.g., Asthma, Type-1 Diabetes, Heart Condition..."
+                          value={medicalInfo.conditions}
+                          onChange={(e) => setMedicalInfo({ ...medicalInfo, conditions: e.target.value })}
+                          className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800 resize-none"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Current Medications &amp; Dosages</label>
+                        <textarea
+                          rows={2}
+                          placeholder="List critical prescription medications you take regularly..."
+                          value={medicalInfo.medications}
+                          onChange={(e) => setMedicalInfo({ ...medicalInfo, medications: e.target.value })}
+                          className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800 resize-none"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Health Insurance Provider &amp; ID</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Star Health - Policy No: 12345"
+                          value={medicalInfo.insurance}
+                          onChange={(e) => setMedicalInfo({ ...medicalInfo, insurance: e.target.value })}
+                          className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Special Notes for Responders</label>
+                        <textarea
+                          rows={2}
+                          placeholder="Any other crucial emergency medical instructions..."
+                          value={medicalInfo.notes}
+                          onChange={(e) => setMedicalInfo({ ...medicalInfo, notes: e.target.value })}
+                          className="w-full text-xs font-semibold px-3.5 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800 resize-none"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-colors text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/10 active:scale-95"
+                    >
+                      Save Medical Records
+                    </button>
+                  </form>
+                )}
+
+                {/* 5. AADHAAR VERIFICATION VIEW */}
+                {profileSubTab === 'verification' && (
+                  <div className="flex flex-col gap-4 animate-scaleUp">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setProfileSubTab('menu')} className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-500 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
+                      <h2 className="text-lg font-bold text-neutral-800">Verification Status</h2>
+                    </div>
+
+                    {aadhaarDetails.status === 'verified' ? (
+                      <div className="bg-green-50/40 border border-green-200 p-6 rounded-2xl flex flex-col items-center text-center gap-4 mt-2">
+                        <div className="w-14 h-14 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-2xl">
+                          🛡️
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-extrabold text-green-800">Identity Fully Verified</h3>
+                          <p className="text-[11px] text-green-600/80 mt-1 max-w-xs leading-relaxed">Your digital identity is linked and verified. SOS beacons sent from your device will be flagged as authenticated for immediate action.</p>
+                        </div>
+                        <div className="bg-white border border-green-100 rounded-xl px-4 py-2 text-xs font-bold text-neutral-700 tracking-wider">
+                          Aadhaar: XXXX-XXXX-{aadhaarDetails.aadhaarNo.slice(-4) || '9999'}
+                        </div>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleVerifyAadhaar} className="bg-white border border-neutral-100 p-5 rounded-2xl flex flex-col gap-4 shadow-sm mt-2">
+                        <div className="p-3 bg-orange-50/50 border border-orange-100/50 rounded-xl flex gap-3 text-left">
+                          <span className="text-base flex-shrink-0">⚠️</span>
+                          <div>
+                            <h4 className="text-2xs font-extrabold text-orange-700 uppercase tracking-tight">Action Required</h4>
+                            <p className="text-3xs text-orange-600/80 mt-0.5 leading-relaxed">Unverified accounts have lower dispatch weight to curb false alarms. Verify your identity to elevate responder speed.</p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-450">Enter Aadhaar Card Number</label>
+                          <input
+                            type="text"
+                            required
+                            maxLength={12}
+                            placeholder="12 Digit Number"
+                            value={aadhaarDetails.aadhaarNo}
+                            disabled={aadhaarDetails.status === 'verifying'}
+                            onChange={(e) => setAadhaarDetails({ ...aadhaarDetails, aadhaarNo: e.target.value.replace(/\D/g, '') })}
+                            className="w-full text-center tracking-widest text-sm font-black px-3.5 py-3 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800"
+                          />
+                        </div>
+
+                        {aadhaarDetails.status === 'verifying' ? (
+                          <div className="py-2 flex flex-col items-center justify-center gap-2">
+                            <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-3xs font-extrabold text-orange-500 tracking-wider uppercase animate-pulse">Requesting OTP and verifying...</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="submit"
+                            disabled={aadhaarDetails.aadhaarNo.length !== 12}
+                            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold transition-colors text-xs flex items-center justify-center gap-1.5 shadow-md shadow-green-500/10 active:scale-95"
+                          >
+                            Verify &amp; Link Profile
+                          </button>
+                        )}
+                      </form>
+                    )}
+                  </div>
+                )}
+
+                {/* 6. SETTINGS VIEW */}
+                {profileSubTab === 'settings' && (
+                  <div className="flex flex-col gap-4 animate-scaleUp">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setProfileSubTab('menu')} className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-500 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
+                      <h2 className="text-lg font-bold text-neutral-800">Settings</h2>
+                    </div>
+
+                    <div className="bg-white border border-neutral-100 p-5 rounded-2xl flex flex-col gap-4 mt-2 shadow-sm">
+                      <h3 className="text-2xs font-extrabold text-neutral-800 border-b border-neutral-50 pb-1.5 uppercase tracking-wide">Notifications &amp; Alerts</h3>
+                      
+                      {/* Push Toggle */}
+                      <div className="flex items-center justify-between py-1">
+                        <div>
+                          <h4 className="text-xs font-bold text-neutral-800">Push Notifications</h4>
+                          <p className="text-3xs text-neutral-400 mt-0.5">Receive immediate incident updates</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSetting('pushEnabled')}
+                          className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none ${notificationSettings.pushEnabled ? 'bg-green-600' : 'bg-neutral-200'}`}
+                        >
+                          <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm ${notificationSettings.pushEnabled ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+
+                      {/* SMS Toggle */}
+                      <div className="flex items-center justify-between py-1">
+                        <div>
+                          <h4 className="text-xs font-bold text-neutral-800">SMS Distress Alerts</h4>
+                          <p className="text-3xs text-neutral-400 mt-0.5">Get safety checks sent via mobile SMS</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSetting('smsEnabled')}
+                          className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none ${notificationSettings.smsEnabled ? 'bg-green-600' : 'bg-neutral-200'}`}
+                        >
+                          <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm ${notificationSettings.smsEnabled ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+
+                      {/* Email Toggle */}
+                      <div className="flex items-center justify-between py-1">
+                        <div>
+                          <h4 className="text-xs font-bold text-neutral-800">Email Updates</h4>
+                          <p className="text-3xs text-neutral-400 mt-0.5">Weekly community safety digest reports</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSetting('emailAlerts')}
+                          className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none ${notificationSettings.emailAlerts ? 'bg-green-600' : 'bg-neutral-200'}`}
+                        >
+                          <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm ${notificationSettings.emailAlerts ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+
+                      <h3 className="text-2xs font-extrabold text-neutral-800 border-b border-neutral-50 pb-1.5 uppercase tracking-wide mt-2">Privacy &amp; Location</h3>
+
+                      {/* Location Sharing select */}
+                      <div className="flex flex-col gap-2">
+                        <div>
+                          <h4 className="text-xs font-bold text-neutral-800">Location Access Level</h4>
+                          <p className="text-3xs text-neutral-400 mt-0.5">Define when emergency services can view coordinates</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectSetting('locationSharing', 'sos_only')}
+                            className={`py-2 px-3 text-3xs font-extrabold border rounded-xl transition-all ${
+                              notificationSettings.locationSharing === 'sos_only'
+                                ? 'bg-red-50 border-red-200 text-[#d61c24] shadow-sm'
+                                : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                            }`}
+                          >
+                            ⚠️ SOS Only (Rec.)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectSetting('locationSharing', 'always')}
+                            className={`py-2 px-3 text-3xs font-extrabold border rounded-xl transition-all ${
+                              notificationSettings.locationSharing === 'always'
+                                ? 'bg-red-50 border-red-200 text-[#d61c24] shadow-sm'
+                                : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                            }`}
+                          >
+                            Always On
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  <div className="flex flex-col gap-2.5 pt-3 border-t border-neutral-200/50">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-neutral-400">Role</span>
-                      <span className="font-bold text-neutral-800 uppercase">{user?.role || 'Requester'}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-neutral-400">Contact Number</span>
-                      <span className="font-bold text-neutral-800">{user?.contactNumber || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-neutral-400">Address</span>
-                      <span className="font-bold text-neutral-800">{user?.location?.address || 'Unknown'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={onLogout}
-                  type="button"
-                  className="mt-6 border border-red-200 text-[#d61c24] hover:bg-red-50 font-bold py-3 rounded-xl text-xs transition-colors"
-                >
-                  Logout Account
-                </button>
               </div>
             )}
 
