@@ -7,10 +7,36 @@ import {
   cancelHelpRequest,
   getMyRequests,
   getMyAssignments,
+  getAllPendingHelpRequests,
 } from '../controllers/helpRequestController';
 import { authenticateToken } from '../middlewares/authMiddleware';
 
 const router = Router();
+
+/**
+ * @swagger
+ * tags:
+ *   name: HelpRequests
+ *   description: Emergency help request management (Do Help & Get Help)
+ */
+
+/**
+ * @swagger
+ * /api/help-requests/all-pending:
+ *   get:
+ *     summary: Fetch all pending help requests (regardless of status/capabilities)
+ *     tags: [HelpRequests]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of pending help requests
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get('/all-pending', authenticateToken, getAllPendingHelpRequests);
 
 /**
  * @swagger

@@ -4,7 +4,7 @@ import Severity from './Severity.jsx';
 import LocationContacts from './LocationContacts.jsx';
 import RequestProcessing from './RequestProcessing.jsx';
 import LiveTracking from './LiveTracking.jsx';
-import NotificationsFeed from './NotificationsFeed.jsx';
+import Listings from './Listings.jsx';
 
 const resourceTypes = [
   { id: 'blood', name: 'Blood Donor', iconColor: 'text-red-500 bg-red-50', icon: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z' },
@@ -30,8 +30,8 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     activeTab = 'home';
   } else if (currentHash === '#/resources') {
     activeTab = 'resources';
-  } else if (currentHash === '#/notifications') {
-    activeTab = 'notifications';
+  } else if (currentHash === '#/listings') {
+    activeTab = 'listings';
   } else if (currentHash === '#/profile') {
     activeTab = 'profile';
   } else if (currentHash.startsWith('#/sos')) {
@@ -250,14 +250,15 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         </button>
 
         <button
-          onClick={() => window.location.hash = '#/notifications'}
+          disabled={isLocked}
+          onClick={() => window.location.hash = '#/listings'}
           type="button"
-          className={`flex flex-col items-center justify-center gap-1 focus:outline-none transition-all flex-1 md:flex-none md:w-full ${activeTab === 'resources' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all w-14 md:w-full ${activeTab === 'listings' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
         >
-          <svg className="w-5.5 h-5.5 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
-            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+          <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-none stroke-current" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
           </svg>
-          <span className="text-3xs md:text-sm font-extrabold tracking-tight">Alerts</span>
+          <span className="text-3xs font-extrabold tracking-tight">Listings</span>
         </button>
 
         <button
@@ -563,6 +564,14 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                 )}
 
               </div>
+            )}
+
+            {/* TAB 5: LISTINGS */}
+            {activeTab === 'listings' && (
+              <Listings
+                user={user}
+                onBack={() => window.location.hash = '#/dashboard'}
+              />
             )}
 
             {/* TAB 4: PROFILE */}

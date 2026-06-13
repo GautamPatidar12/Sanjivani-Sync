@@ -45,8 +45,9 @@ export default function LiveTracking({
     phone: '+91 99887 76655',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
   });
+  const [helperCoords, setHelperCoords] = useState(null); // [lat, lng]
 
-  // 1. Fetch live request data to get helper details if available
+  // 1. Fetch live request data to get helper details if available (polled every 4s)
   useEffect(() => {
     if (!createdRequestId || !user?.token) return;
     
@@ -67,6 +68,11 @@ export default function LiveTracking({
             phone: currentReq.helper.contactNumber || '+91 99887 76655',
             avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150'
           });
+
+          const coords = currentReq.helper.location?.coordinates?.coordinates;
+          if (coords && coords.length >= 2 && (coords[0] !== 0 || coords[1] !== 0)) {
+            setHelperCoords([coords[1], coords[0]]); // [latitude, longitude]
+          }
         }
       } catch (err) {
         console.error('Error fetching helper details:', err);
@@ -74,6 +80,8 @@ export default function LiveTracking({
     };
 
     fetchHelperDetails();
+    const interval = setInterval(fetchHelperDetails, 4000);
+    return () => clearInterval(interval);
   }, [createdRequestId, user?.token]);
 
   // 2. Inject Leaflet CDN files
@@ -203,6 +211,52 @@ export default function LiveTracking({
       }
     };
   }, [leafletLoaded]);
+
+  // Haversine formula helper functions
+  const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Sync Leaflet markers and route polyline to real-time helperCoords
+  useEffect(() => {
+    if (!helperCoords || !mapRef.current) return;
+
+    // Stop simulated movement interval if it exists
+    if (movementIntervalRef.current) {
+      clearInterval(movementIntervalRef.current);
+      movementIntervalRef.current = null;
+    }
+
+    const [hLat, hLng] = helperCoords;
+
+    // Update responder marker location
+    if (markerHelperRef.current) {
+      markerHelperRef.current.setLatLng([hLat, hLng]);
+    }
+
+    // Update polyline route path
+    if (polylineRef.current) {
+      polylineRef.current.setLatLngs([[hLat, hLng], [userLat, userLng]]);
+    }
+
+    // Recalculate distance and ETA dynamically
+    const dist = getDistanceFromLatLonInKm(hLat, hLng, userLat, userLng);
+    setDistance(Number(dist.toFixed(1)));
+    setEta(Math.max(1, Math.round(dist * 3))); // estimate 3 min per km
+
+    // Adjust map to fit both markers
+    const bounds = window.L.latLngBounds([[userLat, userLng], [hLat, hLng]]);
+    mapRef.current.fitBounds(bounds, { padding: [40, 40] });
+
+  }, [helperCoords]);
 
   // Center on user position
   const reCenterMap = () => {
