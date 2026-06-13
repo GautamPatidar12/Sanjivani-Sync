@@ -56,7 +56,7 @@ export default function Severity({ onBack, onSelect }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between">
+    <div className="flex-1 flex flex-col justify-between max-w-xl mx-auto w-full md:bg-white/60 md:backdrop-blur-xl md:border md:border-neutral-100/60 md:shadow-xl md:shadow-neutral-250/20 md:rounded-3xl md:p-8">
       
       {/* Top back button and title header */}
       <div>
