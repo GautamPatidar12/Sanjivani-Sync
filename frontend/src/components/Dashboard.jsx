@@ -50,6 +50,35 @@ export default function Dashboard({ user, onLogout, currentHash }) {
   const [activeContacts, setActiveContacts] = useState([]);
   const [createdRequestId, setCreatedRequestId] = useState(null);
 
+  const [nearbyResources, setNearbyResources] = useState([
+    { id: 'amb', title: 'Ambulances', count: 2, distance: 5, icon: 'M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm13-6l-1.88-5.64c-.19-.57-.72-.96-1.32-.96H8.2c-.6 0-1.13.39-1.32.96L5 9v6c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V9z', color: 'green' },
+    { id: 'hosp', title: 'Hospitals', count: 3, distance: 3, icon: 'M19 3H5c-1.1 0-1.99.9-1.99 2L3 19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z', color: 'blue' },
+    { id: 'bld', title: 'Blood Banks', count: 1, distance: 8, icon: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z', color: 'red' }
+  ]);
+
+  useEffect(() => {
+    if (activeTab === 'home') {
+      const interval = setInterval(() => {
+        setNearbyResources(prev => prev.map(res => {
+          const newCount = Math.max(1, res.count + Math.floor(Math.random() * 3) - 1);
+          const newDist = Math.max(1, res.distance + Math.floor(Math.random() * 3) - 1);
+          return { ...res, count: newCount, distance: newDist };
+        }));
+        if (navigator.vibrate) navigator.vibrate(50);
+        // Play subtle positive ping (base64 simple tick/ping)
+        const audio = new Audio('data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTEAAAAcHR0eHh4fHx8fHyAgICAhISEhISEiIiIiIyMjIyMjJCQkJCUlJSUlJg==');
+        audio.volume = 0.1;
+        audio.play().catch(e => {}); // Ignore play errors (user interaction rules)
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab]);
+
+  const removeNearbyResource = (id) => {
+    setNearbyResources(prev => prev.filter(res => res.id !== id));
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+  };
+
   const [selectedFormResource, setSelectedFormResource] = useState(null);
   const [formInputs, setFormInputs] = useState({
     name: user?.name || 'User',
@@ -307,20 +336,9 @@ export default function Dashboard({ user, onLogout, currentHash }) {
             </div>
 
             {/* Avatar Image */}
-            <div className="relative group cursor-pointer">
-              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white ring-2 ring-red-500/10 group-hover:ring-red-500/30 transition-all duration-300">
-                <img
-                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-                <div style={{ display: 'none' }} className="w-full h-full bg-red-100 flex items-center justify-center text-red-700 font-black text-sm uppercase">
-                  {(user?.name || 'U').substring(0, 2)}
-                </div>
+            <div className="relative group cursor-pointer" onClick={() => window.location.hash = '#/profile'}>
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white ring-2 ring-red-500/10 group-hover:ring-red-500/30 transition-all duration-300 bg-red-100 flex items-center justify-center text-red-700 font-black text-xl uppercase">
+                {(user?.name || 'U').substring(0, 2)}
               </div>
               <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
             </div>
@@ -421,41 +439,30 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                   </div>
 
                   <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 md:flex-wrap">
-                    <div className="flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex items-center gap-3 w-40 md:w-48 lg:w-56 transition-all hover:border-red-100 hover:shadow-md cursor-pointer">
-                      <div className="p-2 rounded-lg bg-green-50 text-green-600">
-                        <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                          <path d="M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm13-6l-1.88-5.64c-.19-.57-.72-.96-1.32-.96H8.2c-.6 0-1.13.39-1.32.96L5 9v6c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V9z" />
-                        </svg>
+                    {nearbyResources.map((res) => (
+                      <div key={res.id} className={`flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex flex-col gap-2 w-40 md:w-48 lg:w-56 transition-all hover:border-${res.color}-100 hover:shadow-md relative group`}>
+                        <button 
+                          onClick={() => removeNearbyResource(res.id)}
+                          className="absolute top-2 right-2 text-neutral-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
+                        >
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                        </button>
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg bg-${res.color}-50 text-${res.color}-600`}>
+                            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                              <path d={res.icon} />
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className="text-2xs font-bold text-neutral-800">{res.count} {res.title}</h4>
+                            <span className="text-3xs text-neutral-400">Within {res.distance} km</span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-2xs font-bold text-neutral-800">2 Ambulances</h4>
-                        <span className="text-3xs text-neutral-400">Within 5 km</span>
-                      </div>
-                    </div>
-
-                    <div className="flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex items-center gap-3 w-40 md:w-48 lg:w-56 transition-all hover:border-blue-100 hover:shadow-md cursor-pointer">
-                      <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
-                        <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                          <path d="M19 3H5c-1.1 0-1.99.9-1.99 2L3 19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h4 className="text-2xs font-bold text-neutral-800">3 Hospitals</h4>
-                        <span className="text-3xs text-neutral-400">Within 3 km</span>
-                      </div>
-                    </div>
-
-                    <div className="flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex items-center gap-3 w-40 md:w-48 lg:w-56 transition-all hover:border-red-100 hover:shadow-md cursor-pointer">
-                      <div className="p-2 rounded-lg bg-red-50 text-red-600">
-                        <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h4 className="text-2xs font-bold text-neutral-800">2 Blood Banks</h4>
-                        <span className="text-3xs text-neutral-400">Within 4 km</span>
-                      </div>
-                    </div>
+                    ))}
+                    {nearbyResources.length === 0 && (
+                      <div className="text-2xs text-neutral-400 italic py-2">No nearby resources tracking active.</div>
+                    )}
                   </div>
                 </div>
               </>

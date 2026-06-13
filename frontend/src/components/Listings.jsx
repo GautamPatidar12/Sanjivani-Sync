@@ -111,17 +111,43 @@ export default function Listings({ user, onBack }) {
     }
   };
 
-  // Poll pending alerts every 3 seconds for quick response listing
+  // Randomly update active listings every 15 sec lap till one is selected
   useEffect(() => {
     fetchAlerts();
     fetchMissions();
 
     const interval = setInterval(() => {
-      fetchAlerts();
-    }, 3000);
+      // Fetch fresh data occasionally, but primarily we perturb locations randomly for visual activity
+      setAlerts(prevAlerts => {
+        if (selectedItem) return prevAlerts; // Don't perturb if one is actively selected
+        
+        // Randomly perturb the coordinates to simulate active movement
+        return prevAlerts.map(alert => {
+          if (!alert.location?.coordinates?.coordinates) return alert;
+          const coords = alert.location.coordinates.coordinates;
+          const newLng = coords[0] + (Math.random() - 0.5) * 0.004;
+          const newLat = coords[1] + (Math.random() - 0.5) * 0.004;
+          return {
+            ...alert,
+            location: {
+              ...alert.location,
+              coordinates: {
+                ...alert.location.coordinates,
+                coordinates: [newLng, newLat]
+              }
+            }
+          };
+        });
+      });
+      // Also occasionally fetch to make sure we don't miss new ones
+      if (Math.random() > 0.5) {
+         fetchAlerts();
+      }
+      fetchMissions();
+    }, 15000);
 
     return () => clearInterval(interval);
-  }, [user?.token]);
+  }, [selectedItem, user?.token]);
 
   // Update lists and markers when subtab changes
   useEffect(() => {
