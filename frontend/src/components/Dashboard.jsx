@@ -51,7 +51,6 @@ export default function Dashboard({ user, onLogout, currentHash }) {
   const [createdRequestId, setCreatedRequestId] = useState(null);
 
   const [selectedFormResource, setSelectedFormResource] = useState(null);
-  const [requestSubmitted, setRequestSubmitted] = useState(false);
   const [formInputs, setFormInputs] = useState({
     name: user?.name || 'User',
     contact: user?.contactNumber || '98765 43210',
@@ -253,18 +252,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         <button
           onClick={() => window.location.hash = '#/notifications'}
           type="button"
-          className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-4 focus:outline-none transition-all flex-1 md:flex-none md:w-full md:px-4 md:py-3.5 md:rounded-xl ${activeTab === 'notifications' ? 'text-[#d61c24] md:bg-red-50/50 md:shadow-sm md:shadow-red-500/5' : 'text-neutral-400 hover:text-neutral-500 md:hover:bg-neutral-50'}`}
-        >
-          <svg className="w-5.5 h-5.5 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
-            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
-          </svg>
-          <span className="text-3xs md:text-sm font-extrabold tracking-tight">Alerts</span>
-        </button>
-
-        <button
-          onClick={() => window.location.hash = '#/notifications'}
-          type="button"
-          className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-4 focus:outline-none transition-all flex-1 md:flex-none md:w-full md:px-4 md:py-3.5 md:rounded-xl ${activeTab === 'notifications' ? 'text-[#d61c24] md:bg-red-50/50 md:shadow-sm md:shadow-red-500/5' : 'text-neutral-400 hover:text-neutral-500 md:hover:bg-neutral-50'}`}
+          className={`flex flex-col items-center justify-center gap-1 focus:outline-none transition-all flex-1 md:flex-none md:w-full ${activeTab === 'resources' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
         >
           <svg className="w-5.5 h-5.5 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
             <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
