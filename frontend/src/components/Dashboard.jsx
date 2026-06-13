@@ -85,7 +85,13 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     contact: user?.contactNumber || '98765 43210',
     address: user?.location?.address || 'Unknown Address',
     description: '',
-    urgency: 'High'
+    urgency: 'high',
+    bloodGroup: 'A+',
+    foodType: 'Vegetarian',
+    peopleCount: '1',
+    prescription: '',
+    passengers: '1',
+    skills: 'General Help'
   });
 
   const [activeSosCancelled, setActiveSosCancelled] = useState(false);
@@ -238,14 +244,48 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     return () => clearInterval(interval);
   }, [activeTab, sosStep, activeSosCancelled]);
 
-  const handleResourceFormSubmit = (e) => {
+  const handleResourceFormSubmit = async (e) => {
     e.preventDefault();
-    setRequestSubmitted(true);
-    setTimeout(() => {
-      setSelectedResourceCategory(null);
-      setIsShowingResourceForm(false);
-      setRequestSubmitted(false);
-    }, 2200);
+
+    // Construct description based on type
+    let finalDescription = formInputs.description;
+    if (selectedFormResource?.id === 'blood') finalDescription = `Blood Group Needed: ${formInputs.bloodGroup} | ${finalDescription}`;
+    if (selectedFormResource?.id === 'food') finalDescription = `Food Preference: ${formInputs.foodType} | ${finalDescription}`;
+    if (selectedFormResource?.id === 'shelter') finalDescription = `People needing shelter: ${formInputs.peopleCount} | ${finalDescription}`;
+    if (selectedFormResource?.id === 'medicine') finalDescription = `Medical Details: ${formInputs.prescription} | ${finalDescription}`;
+    if (selectedFormResource?.id === 'transport') finalDescription = `Passengers: ${formInputs.passengers} | ${finalDescription}`;
+    if (selectedFormResource?.id === 'volunteer') finalDescription = `Required Skills: ${formInputs.skills} | ${finalDescription}`;
+
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('token');
+      await fetch(`${API_URL}/api/help-requests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          helpType: selectedFormResource?.id || 'volunteer',
+          description: finalDescription,
+          urgency: formInputs.urgency,
+          location: {
+            address: formInputs.address,
+            coordinates: user?.location?.coordinates?.coordinates || [0, 0]
+          }
+        })
+      });
+      setRequestSubmitted(true);
+      setTimeout(() => {
+        setSelectedFormResource(null);
+        setRequestSubmitted(false);
+        // Automatically jump to listings to see the active requests!
+        window.location.hash = '#/listings';
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit request');
+    }
   };
 
   const isConfigRoute = activeTab === 'sos' && (sosStep === 'type' || sosStep === 'severity' || sosStep === 'location-contacts' || sosStep === 'processing');
@@ -268,47 +308,21 @@ export default function Dashboard({ user, onLogout, currentHash }) {
 
         <button
           disabled={isLocked}
-          onClick={() => window.location.hash = '#/resources'}
-          type="button"
-          className={`flex flex-col items-center justify-center gap-1 focus:outline-none transition-all flex-1 md:flex-none md:w-full ${activeTab === 'resources' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
-        >
-          <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-current" viewBox="0 0 24 24">
-            <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
-          </svg>
-          <span className="text-3xs font-extrabold tracking-tight">Resources</span>
-        </button>
-
-        <button
-          disabled={isLocked}
           onClick={() => window.location.hash = '#/listings'}
           type="button"
-          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all w-14 md:w-full ${activeTab === 'listings' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all flex-1 md:flex-none md:w-full ${activeTab === 'listings' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
         >
           <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-none stroke-current" strokeWidth={2.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
           </svg>
-          <span className="text-3xs font-extrabold tracking-tight">Listings</span>
-        </button>
-
-        <button
-          disabled={isLocked}
-          onClick={() => {
-            window.location.hash = '#/sos/type';
-          }}
-          type="button"
-          className={`relative flex flex-col items-center justify-center focus:outline-none transition-all active:scale-95 z-30 w-16 -mt-6 md:mt-0 md:mb-2 md:w-full ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
-        >
-          <div className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-[#d61c24] flex items-center justify-center text-white shadow-lg shadow-red-500/30 border-4 border-white md:border-red-50 font-extrabold text-[10px] md:text-xs tracking-wider uppercase">
-            SOS
-          </div>
-          <span className={`text-3xs font-extrabold tracking-tight mt-1 ${activeTab === 'sos' ? 'text-[#d61c24]' : 'text-neutral-400'}`}>SOS</span>
+          <span className="text-3xs font-extrabold tracking-tight">Alerts</span>
         </button>
 
         <button
           disabled={isLocked}
           onClick={() => window.location.hash = '#/profile'}
           type="button"
-          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all w-14 md:w-full md:mt-auto ${activeTab === 'profile' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all flex-1 md:flex-none md:w-full md:mt-auto ${activeTab === 'profile' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
         >
           <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-current" viewBox="0 0 24 24">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -591,8 +605,8 @@ export default function Dashboard({ user, onLogout, currentHash }) {
 
                 <div className="bg-neutral-50 rounded-2xl border border-neutral-100 p-4 flex flex-col gap-4 mt-2">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-500">
-                      <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150" alt="Profile" className="w-full h-full object-cover" />
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white ring-2 ring-red-500/10 transition-all duration-300 bg-red-100 flex items-center justify-center text-red-700 font-black text-2xl uppercase">
+                      {(user?.name || 'U').substring(0, 2)}
                     </div>
                     <div>
                       <h3 className="text-base font-extrabold text-neutral-850">{user?.name || 'User'}</h3>
@@ -704,12 +718,97 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                     <textarea
                       required
                       rows={2.5}
-                      placeholder="Specify quantities, prescriptions, or blood group details..."
+                      placeholder="Specify quantities, or additional details..."
                       value={formInputs.description}
                       onChange={(e) => setFormInputs({ ...formInputs, description: e.target.value })}
                       className="w-full text-xs font-semibold px-3 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800 resize-none"
                     />
                   </div>
+
+                  {/* DYNAMIC FORM FIELDS BASED ON CATEGORY */}
+                  {selectedFormResource.id === 'blood' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-red-500">Required Blood Group</label>
+                      <select
+                        value={formInputs.bloodGroup}
+                        onChange={(e) => setFormInputs({ ...formInputs, bloodGroup: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-red-50 rounded-xl border border-red-200 focus:outline-none focus:border-red-500 text-red-800 cursor-pointer"
+                      >
+                        <option value="A+">A+</option><option value="A-">A-</option>
+                        <option value="B+">B+</option><option value="B-">B-</option>
+                        <option value="O+">O+</option><option value="O-">O-</option>
+                        <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedFormResource.id === 'food' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-amber-600">Dietary Preference</label>
+                      <select
+                        value={formInputs.foodType}
+                        onChange={(e) => setFormInputs({ ...formInputs, foodType: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-amber-50 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 text-amber-800 cursor-pointer"
+                      >
+                        <option value="Vegetarian">Vegetarian</option>
+                        <option value="Vegan">Vegan</option>
+                        <option value="Non-Vegetarian">Non-Vegetarian</option>
+                        <option value="Any">Any</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedFormResource.id === 'shelter' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-blue-600">Number of People</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formInputs.peopleCount}
+                        onChange={(e) => setFormInputs({ ...formInputs, peopleCount: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-blue-50 rounded-xl border border-blue-200 focus:outline-none focus:border-blue-500 text-blue-800"
+                      />
+                    </div>
+                  )}
+
+                  {selectedFormResource.id === 'medicine' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-teal-600">Medical Specifics</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Insulin, Inhaler, First Aid"
+                        value={formInputs.prescription}
+                        onChange={(e) => setFormInputs({ ...formInputs, prescription: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-teal-50 rounded-xl border border-teal-200 focus:outline-none focus:border-teal-500 text-teal-800"
+                      />
+                    </div>
+                  )}
+
+                  {selectedFormResource.id === 'transport' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-indigo-600">Passengers</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formInputs.passengers}
+                        onChange={(e) => setFormInputs({ ...formInputs, passengers: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-indigo-50 rounded-xl border border-indigo-200 focus:outline-none focus:border-indigo-500 text-indigo-800"
+                      />
+                    </div>
+                  )}
+
+                  {selectedFormResource.id === 'volunteer' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-emerald-600">Required Skills</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Doctor, Search & Rescue, Labor"
+                        value={formInputs.skills}
+                        onChange={(e) => setFormInputs({ ...formInputs, skills: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-emerald-50 rounded-xl border border-emerald-200 focus:outline-none focus:border-emerald-500 text-emerald-800"
+                      />
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-1">
                     <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Urgency Level</label>
