@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { apiReference } from '@scalar/express-api-reference';
 import authRoutes from './routes/authRoutes';
+import userRoutes from './routes/userRoutes';
+import helpRequestRoutes from './routes/helpRequestRoutes';
 import { swaggerSpec } from './swagger';
 
 // Load environment variables
@@ -31,6 +33,8 @@ connectDB();
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/help-requests', helpRequestRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {
