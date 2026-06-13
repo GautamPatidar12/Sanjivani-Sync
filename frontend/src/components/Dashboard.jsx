@@ -4,6 +4,7 @@ import Severity from './Severity.jsx';
 import LocationContacts from './LocationContacts.jsx';
 import RequestProcessing from './RequestProcessing.jsx';
 import LiveTracking from './LiveTracking.jsx';
+import ProfilePage from './ProfilePage.jsx';
 
 const resourceTypes = [
   { id: 'blood', name: 'Blood Donor', iconColor: 'text-red-500 bg-red-50', icon: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z' },
@@ -20,7 +21,7 @@ const severityLevels = [
   { id: 'critical', title: 'Critical', desc: 'Life-threatening', color: 'border-red-500 ring-red-500/10 text-red-600 bg-red-50' }
 ];
 
-export default function Dashboard({ user, onLogout, currentHash }) {
+export default function Dashboard({ user, onLogout, onUserUpdate, currentHash }) {
   // Determine active Tab and SOS Step based on global URL hash
   let activeTab = 'home';
   let sosStep = 'type';
@@ -428,48 +429,11 @@ export default function Dashboard({ user, onLogout, currentHash }) {
 
           {/* TAB 4: PROFILE */}
           {activeTab === 'profile' && (
-            <div className="flex-1 flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <button onClick={() => window.location.hash = '#/dashboard'} className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
-                <h2 className="text-lg font-bold text-neutral-800">Emergency Profile</h2>
-              </div>
-
-              <div className="bg-neutral-50 rounded-2xl border border-neutral-100 p-4 flex flex-col gap-4 mt-2">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-500">
-                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150" alt="Profile" className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-extrabold text-neutral-850">{user?.name || 'User'}</h3>
-                    <span className="text-xs text-neutral-400">{user?.email || 'user@example.com'}</span>
-                    <div className="text-3xs font-extrabold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full inline-block mt-1">Verified Member</div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2.5 pt-3 border-t border-neutral-200/50">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-neutral-400">Role</span>
-                    <span className="font-bold text-neutral-800 uppercase">{user?.role || 'Requester'}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-neutral-400">Contact Number</span>
-                    <span className="font-bold text-neutral-800">{user?.contactNumber || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-neutral-400">Address</span>
-                    <span className="font-bold text-neutral-800">{user?.location?.address || 'Unknown'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={onLogout}
-                type="button"
-                className="mt-6 border border-red-200 text-[#d61c24] hover:bg-red-50 font-bold py-3 rounded-xl text-xs transition-colors"
-              >
-                Logout Account
-              </button>
-            </div>
+            <ProfilePage
+              user={user}
+              onUserUpdate={onUserUpdate}
+              onLogout={onLogout}
+            />
           )}
 
         </div>
