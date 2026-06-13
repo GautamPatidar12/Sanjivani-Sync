@@ -35,6 +35,14 @@ function App() {
     window.location.hash = '#/dashboard';
   };
 
+  const handleUserUpdate = (newUserData) => {
+    setUser(prev => {
+      if (!prev) return newUserData;
+      const token = prev.token;
+      return { ...prev, ...newUserData, token };
+    });
+  };
+
   const handleLogout = () => {
     setUser(null);
     window.location.hash = '#/login';
@@ -66,6 +74,7 @@ function App() {
           <Dashboard 
             user={user} 
             onLogout={handleLogout} 
+            onUserUpdate={handleUserUpdate}
             currentHash={currentHash}
           />
         )}
