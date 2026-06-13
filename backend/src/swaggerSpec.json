@@ -1,0 +1,782 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Local Resource Sharing API",
+    "version": "1.0.0",
+    "description": "API documentation for the Local Resource Sharing platform backend."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/users/status": {
+      "put": {
+        "summary": "Toggle helper/organization online status and update location/help types",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "isOnline"
+                ],
+                "properties": {
+                  "isOnline": {
+                    "type": "boolean",
+                    "description": "Set true to go online and receive requests, false to go offline"
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string"
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[longitude, latitude]"
+                      }
+                    }
+                  },
+                  "helpTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "blood",
+                        "shelter",
+                        "food",
+                        "transport"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated successfully"
+          },
+          "400": {
+            "description": "Invalid inputs"
+          },
+          "401": {
+            "description": "Access Denied"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/marketplace/categories": {
+      "get": {
+        "summary": "Get all resource categories with availability counts",
+        "tags": [
+          "Marketplace"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of categories with counts"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/marketplace/{category}": {
+      "get": {
+        "summary": "Get helpers and organizations offering a specific resource category",
+        "tags": [
+          "Marketplace"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Category of resource (e.g., blood, food, transport, shelter)"
+          },
+          {
+            "in": "query",
+            "name": "lat",
+            "schema": {
+              "type": "number"
+            },
+            "description": "Latitude for geospatial sorting"
+          },
+          {
+            "in": "query",
+            "name": "lng",
+            "schema": {
+              "type": "number"
+            },
+            "description": "Longitude for geospatial sorting"
+          },
+          {
+            "in": "query",
+            "name": "radiusInKm",
+            "schema": {
+              "type": "number"
+            },
+            "description": "Max distance in km (default 50)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of matching users"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/help-requests": {
+      "post": {
+        "summary": "Create an emergency help request (Get Help)",
+        "tags": [
+          "HelpRequests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "helpType",
+                  "description",
+                  "location"
+                ],
+                "properties": {
+                  "helpType": {
+                    "type": "string",
+                    "enum": [
+                      "blood",
+                      "shelter",
+                      "food",
+                      "transport"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Specific details (e.g., Blood group, quantity, number of people)"
+                  },
+                  "urgency": {
+                    "type": "string",
+                    "enum": [
+                      "low",
+                      "medium",
+                      "high",
+                      "critical"
+                    ],
+                    "default": "medium"
+                  },
+                  "location": {
+                    "type": "object",
+                    "required": [
+                      "coordinates"
+                    ],
+                    "properties": {
+                      "address": {
+                        "type": "string"
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[longitude, latitude]"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Request created successfully"
+          },
+          "400": {
+            "description": "Missing fields or invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/help-requests/feed": {
+      "get": {
+        "summary": "Fetch pending requests for online helpers (Do Help)",
+        "description": "Returns a list of requests. If the logged-in user is offline, returns an empty array. If online, sorts pending requests by proximity to the helper.",
+        "tags": [
+          "HelpRequests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of help requests matching the helper's capabilities and location"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/help-requests/my-requests": {
+      "get": {
+        "summary": "Get all emergency requests created by the logged-in user",
+        "tags": [
+          "HelpRequests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user's requests"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/help-requests/my-assignments": {
+      "get": {
+        "summary": "Get all requests accepted/assigned to the logged-in helper",
+        "tags": [
+          "HelpRequests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of assignments"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/help-requests/{id}/accept": {
+      "put": {
+        "summary": "Accept a pending help request (Assign helper)",
+        "tags": [
+          "HelpRequests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The help request ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request accepted successfully"
+          },
+          "400": {
+            "description": "Request is not pending or user trying to accept their own request"
+          },
+          "404": {
+            "description": "Request not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/help-requests/{id}/resolve": {
+      "put": {
+        "summary": "Mark a help request as resolved",
+        "tags": [
+          "HelpRequests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The help request ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request resolved"
+          },
+          "403": {
+            "description": "Unauthorized to resolve"
+          },
+          "404": {
+            "description": "Request not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/help-requests/{id}/cancel": {
+      "put": {
+        "summary": "Cancel a help request",
+        "tags": [
+          "HelpRequests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The help request ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request cancelled"
+          },
+          "403": {
+            "description": "Unauthorized to cancel"
+          },
+          "404": {
+            "description": "Request not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register a new user",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "email",
+                  "password",
+                  "role",
+                  "contactNumber",
+                  "location"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "helper",
+                      "requester",
+                      "organization"
+                    ]
+                  },
+                  "orgType": {
+                    "type": "string",
+                    "enum": [
+                      "hospital",
+                      "blood_bank",
+                      "hotel",
+                      "vehicle_owner",
+                      "none"
+                    ],
+                    "default": "none"
+                  },
+                  "contactNumber": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "object",
+                    "required": [
+                      "coordinates"
+                    ],
+                    "properties": {
+                      "address": {
+                        "type": "string"
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[longitude, latitude]"
+                      }
+                    }
+                  },
+                  "helpTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "blood",
+                        "shelter",
+                        "food",
+                        "transport"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully"
+          },
+          "400": {
+            "description": "User already exists"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login user (Smart Dummy Login)",
+        "description": "Authenticates with the provided email. If the user doesn't exist, it automatically creates a dummy account in the database using the provided helper/requester/org details.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "If omitted, generates a dummy email based on role/orgType"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "helper",
+                      "requester",
+                      "organization"
+                    ],
+                    "default": "helper"
+                  },
+                  "orgType": {
+                    "type": "string",
+                    "enum": [
+                      "hospital",
+                      "blood_bank",
+                      "hotel",
+                      "vehicle_owner",
+                      "none"
+                    ],
+                    "default": "none"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the dummy account (auto-generated if omitted)"
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string"
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[longitude, latitude]"
+                      }
+                    }
+                  },
+                  "helpTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "blood",
+                        "shelter",
+                        "food",
+                        "transport"
+                      ]
+                    }
+                  },
+                  "contactNumber": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User logged in successfully (dummy or real account)"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/auth/profile": {
+      "get": {
+        "summary": "Get user profile",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved"
+          },
+          "401": {
+            "description": "Access Denied. No token provided."
+          },
+          "403": {
+            "description": "Invalid Token"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update user profile",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "contactNumber": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string"
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "[longitude, latitude]"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User profile updated"
+          },
+          "401": {
+            "description": "Access Denied"
+          },
+          "403": {
+            "description": "Invalid Token"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete user account",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User removed"
+          },
+          "401": {
+            "description": "Access Denied"
+          },
+          "403": {
+            "description": "Invalid Token"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Users",
+      "description": "User profile and status management"
+    },
+    {
+      "name": "Marketplace",
+      "description": "Browse and find emergency resources"
+    },
+    {
+      "name": "HelpRequests",
+      "description": "Emergency help request management (Do Help & Get Help)"
+    },
+    {
+      "name": "Auth",
+      "description": "Authentication management"
+    }
+  ]
+}

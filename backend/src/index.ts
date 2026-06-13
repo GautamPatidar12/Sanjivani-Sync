@@ -2,10 +2,10 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { apiReference } from '@scalar/express-api-reference';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import helpRequestRoutes from './routes/helpRequestRoutes';
+import marketplaceRoutes from './routes/marketplaceRoutes';
 import { swaggerSpec } from './swagger';
 
 // Load environment variables
@@ -24,8 +24,8 @@ const connectDB = async () => {
     const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sanjivani_sync');
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error: any) {
-    console.error(`Error: ${error.message}`);
-    process.exit(1);
+    console.error(`MongoDB Connection Error: ${error.message}`);
+    // DO NOT process.exit(1) in a Serverless Function, it will cause a 500 FUNCTION_INVOCATION_FAILED
   }
 };
 
@@ -35,24 +35,49 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/help-requests', helpRequestRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
-// API Documentation (Scalar)
-app.use(
-  '/docs',
-  apiReference({
-    spec: {
-      content: swaggerSpec,
-    },
-    theme: 'purple',
-  })
-);
-
-app.listen(port, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${port}`);
-  console.log(`API Documentation available at http://localhost:${port}/docs`);
+// Serve the OpenAPI specification
+app.get('/openapi.json', (req, res) => {
+  res.json(swaggerSpec);
 });
+
+// API Documentation (Scalar) - Using CDN
+app.get('/docs', (req, res) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Sanjivani Sync API Reference</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>body { margin: 0; padding: 0; }</style>
+      </head>
+      <body>
+        <script id="api-reference" data-url="/openapi.json"></script>
+        <script>
+          var configuration = {
+            theme: 'purple'
+          };
+          document.getElementById('api-reference').dataset.configuration = JSON.stringify(configuration);
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+      </body>
+    </html>
+  `;
+  res.send(html);
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${port}`);
+    console.log(`API Documentation available at http://localhost:${port}/docs`);
+  });
+}
+
+export default app;
