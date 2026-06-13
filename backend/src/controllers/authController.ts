@@ -55,6 +55,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       orgType: user.orgType,
       location: user.location,
       helpTypes: user.helpTypes,
+      dob: user.dob || '',
+      emergencyContacts: user.emergencyContacts || [],
+      isIdVerified: user.isIdVerified || false,
+      notificationSettings: user.notificationSettings || { pushEnabled: true, smsEnabled: true, soundType: 'siren' },
       token: generateToken(user._id.toString()),
     });
   } catch (error: any) {
@@ -82,7 +86,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Verify password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password || '');
 
     if (!isMatch) {
       res.status(401).json({ message: 'Invalid credentials' });
@@ -101,6 +105,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       isOnline: user.isOnline,
       helpTypes: user.helpTypes || [],
       location: user.location || { address: 'Unknown', coordinates: { type: 'Point', coordinates: defaultCoords } },
+      dob: user.dob || '',
+      emergencyContacts: user.emergencyContacts || [],
+      isIdVerified: user.isIdVerified || false,
+      notificationSettings: user.notificationSettings || { pushEnabled: true, smsEnabled: true, soundType: 'siren' },
       token: generateToken(user._id.toString()),
     });
   } catch (error: any) {
@@ -171,6 +179,10 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
       isOnline: user.isOnline,
       helpTypes: user.helpTypes || [],
       location: user.location || { address: 'Unknown', coordinates: { type: 'Point', coordinates: defaultCoords } },
+      dob: user.dob || '',
+      emergencyContacts: user.emergencyContacts || [],
+      isIdVerified: user.isIdVerified || false,
+      notificationSettings: user.notificationSettings || { pushEnabled: true, smsEnabled: true, soundType: 'siren' },
       token: generateToken(user._id.toString()),
     });
   } catch (error: any) {
@@ -216,6 +228,23 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
         user.password = await bcrypt.hash(req.body.password, salt);
       }
 
+      if (req.body.dob !== undefined) {
+        user.dob = req.body.dob;
+      }
+      if (req.body.emergencyContacts !== undefined) {
+        user.emergencyContacts = req.body.emergencyContacts;
+      }
+      if (req.body.isIdVerified !== undefined) {
+        user.isIdVerified = req.body.isIdVerified;
+      }
+      if (req.body.notificationSettings !== undefined) {
+        user.notificationSettings = {
+          pushEnabled: req.body.notificationSettings.pushEnabled !== undefined ? req.body.notificationSettings.pushEnabled : user.notificationSettings.pushEnabled,
+          smsEnabled: req.body.notificationSettings.smsEnabled !== undefined ? req.body.notificationSettings.smsEnabled : user.notificationSettings.smsEnabled,
+          soundType: req.body.notificationSettings.soundType !== undefined ? req.body.notificationSettings.soundType : user.notificationSettings.soundType,
+        };
+      }
+
       const updatedUser = await user.save();
 
       res.json({
@@ -227,6 +256,10 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
         isOnline: updatedUser.isOnline,
         location: updatedUser.location,
         helpTypes: updatedUser.helpTypes,
+        dob: updatedUser.dob || '',
+        emergencyContacts: updatedUser.emergencyContacts || [],
+        isIdVerified: updatedUser.isIdVerified || false,
+        notificationSettings: updatedUser.notificationSettings || { pushEnabled: true, smsEnabled: true, soundType: 'siren' },
         token: generateToken(updatedUser._id.toString()),
       });
     } else {

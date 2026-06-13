@@ -14,27 +14,29 @@ export default function ProfilePage({ user, onUserUpdate, onLogout }) {
     email: user?.email || '',
     contactNumber: user?.contactNumber || '',
     address: user?.location?.address || '',
+    dob: user?.dob || '',
   });
 
-  const [volunteerForm, setVolunteerForm] = useState({
-    isOnline: user?.isOnline || false,
-    helpTypes: user?.helpTypes || [],
-  });
-
-  const [medicalForm, setMedicalForm] = useState({
-    bloodGroup: 'B+',
-    allergies: 'None reported',
-    conditions: 'None',
-    medications: 'None'
-  });
-
-  const [contactsList, setContactsList] = useState([
-    { name: 'Dr. Sanjiv', phone: '+91 99887 76655', relation: 'Doctor' },
-    { name: 'Rajesh Kumar', phone: '+91 98765 00001', relation: 'Father' },
-    { name: 'Sunita Sharma', phone: '+91 98765 00002', relation: 'Mother' },
-  ]);
+  const [contactsList, setContactsList] = useState(
+    user?.emergencyContacts && user.emergencyContacts.length > 0
+      ? user.emergencyContacts
+      : [
+          { name: 'Dr. Sanjiv', phone: '+91 99887 76655', relation: 'Doctor' },
+          { name: 'Rajesh Kumar', phone: '+91 98765 00001', relation: 'Father' },
+          { name: 'Sunita Sharma', phone: '+91 98765 00002', relation: 'Mother' },
+        ]
+  );
 
   const [newContact, setNewContact] = useState({ name: '', phone: '', relation: '' });
+
+  const [notificationSettings, setNotificationSettings] = useState({
+    pushEnabled: user?.notificationSettings?.pushEnabled ?? true,
+    smsEnabled: user?.notificationSettings?.smsEnabled ?? true,
+    soundType: user?.notificationSettings?.soundType ?? 'siren',
+  });
+
+  const [idType, setIdType] = useState('Aadhaar');
+  const [idNumber, setIdNumber] = useState('');
 
   // Sync states with incoming user prop updates
   useEffect(() => {
@@ -44,11 +46,18 @@ export default function ProfilePage({ user, onUserUpdate, onLogout }) {
         email: user.email || '',
         contactNumber: user.contactNumber || '',
         address: user.location?.address || '',
+        dob: user.dob || '',
       });
-      setVolunteerForm({
-        isOnline: user.isOnline || false,
-        helpTypes: user.helpTypes || [],
-      });
+      if (user.emergencyContacts) {
+        setContactsList(user.emergencyContacts);
+      }
+      if (user.notificationSettings) {
+        setNotificationSettings({
+          pushEnabled: user.notificationSettings.pushEnabled ?? true,
+          smsEnabled: user.notificationSettings.smsEnabled ?? true,
+          soundType: user.notificationSettings.soundType ?? 'siren',
+        });
+      }
     }
   }, [user]);
 
@@ -75,6 +84,7 @@ export default function ProfilePage({ user, onUserUpdate, onLogout }) {
           name: personalForm.name,
           email: personalForm.email,
           contactNumber: personalForm.contactNumber,
+          dob: personalForm.dob,
           location: {
             address: personalForm.address,
             coordinates: user?.location?.coordinates?.coordinates || [77.4126, 23.2599]
@@ -98,77 +108,121 @@ export default function ProfilePage({ user, onUserUpdate, onLogout }) {
     }
   };
 
-  // 2. Save Volunteer Status (PUT /api/users/status)
-  const handleSaveVolunteer = async (e) => {
-    e.preventDefault();
+  // 2. Save Emergency Contacts (PUT /api/auth/profile)
+  const saveEmergencyContacts = async (updatedList) => {
     setIsLoading(true);
     setErrorMsg('');
-
     try {
-      const res = await fetch(`${API_BASE_URL}/api/users/status`, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user?.token}`,
         },
         body: JSON.stringify({
-          isOnline: volunteerForm.isOnline,
-          helpTypes: volunteerForm.helpTypes,
-          location: {
-            address: user?.location?.address || 'Unknown',
-            coordinates: user?.location?.coordinates?.coordinates || [77.4126, 23.2599]
-          }
+          emergencyContacts: updatedList
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to update online status');
+        throw new Error(data.message || 'Failed to update emergency contacts');
       }
 
-      // Sync updated fields back to the global user state
-      onUserUpdate({
-        isOnline: data.user.isOnline,
-        helpTypes: data.user.helpTypes,
-      });
-
-      showToast(`Status set to ${volunteerForm.isOnline ? 'Online' : 'Offline'}`);
-      setActiveModal(null);
+      onUserUpdate(data);
+      showToast('Emergency contacts updated!');
     } catch (err) {
-      setErrorMsg(err.message || 'Connection failed.');
+      setErrorMsg(err.message || 'Failed to save changes.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Toggle category choices in helpTypes
-  const toggleHelpType = (type) => {
-    const types = [...volunteerForm.helpTypes];
-    const idx = types.indexOf(type);
-    if (idx > -1) {
-      types.splice(idx, 1);
-    } else {
-      types.push(type);
-    }
-    setVolunteerForm({ ...volunteerForm, helpTypes: types });
-  };
-
-  // Add a new emergency contact locally
-  const handleAddContact = (e) => {
+  // Add a new emergency contact
+  const handleAddContact = async (e) => {
     e.preventDefault();
     if (!newContact.name || !newContact.phone) return;
-    setContactsList([...contactsList, newContact]);
+    const updatedList = [...contactsList, newContact];
+    setContactsList(updatedList);
     setNewContact({ name: '', phone: '', relation: '' });
-    showToast('Contact added!');
+    await saveEmergencyContacts(updatedList);
   };
 
-  // Delete an emergency contact locally
-  const handleDeleteContact = (index) => {
-    const list = [...contactsList];
-    list.splice(index, 1);
-    setContactsList(list);
-    showToast('Contact deleted');
+  // Delete an emergency contact
+  const handleDeleteContact = async (index) => {
+    const updatedList = [...contactsList];
+    updatedList.splice(index, 1);
+    setContactsList(updatedList);
+    await saveEmergencyContacts(updatedList);
+  };
+
+  // 3. Save Government ID Verification (PUT /api/auth/profile)
+  const handleVerifyId = async (e) => {
+    e.preventDefault();
+    if (!idNumber) return;
+    setIsLoading(true);
+    setErrorMsg('');
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`,
+        },
+        body: JSON.stringify({
+          isIdVerified: true
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to verify ID');
+      }
+
+      onUserUpdate(data);
+      showToast('ID verification successful!');
+    } catch (err) {
+      setErrorMsg(err.message || 'Verification connection failed.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 4. Save Notification Settings (PUT /api/auth/profile)
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrorMsg('');
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`,
+        },
+        body: JSON.stringify({
+          notificationSettings
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to update settings');
+      }
+
+      onUserUpdate(data);
+      showToast('Notification settings saved!');
+      setActiveModal(null);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to save settings.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleShareInvite = () => {
@@ -238,12 +292,21 @@ export default function ProfilePage({ user, onUserUpdate, onLogout }) {
                 </span>
 
                 {/* Verified user tag */}
-                <div className="mt-2.5 flex items-center gap-1 text-[10px] font-black text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full w-fit">
-                  <span>Verified User</span>
-                  <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
-                  </svg>
-                </div>
+                {user?.isIdVerified ? (
+                  <div className="mt-2.5 flex items-center gap-1 text-[10px] font-black text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full w-fit">
+                    <span>Verified User</span>
+                    <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="mt-2.5 flex items-center gap-1 text-[10px] font-black text-amber-605 bg-amber-500/10 px-2 py-0.5 rounded-full w-fit">
+                    <span>Unverified Account</span>
+                    <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 2c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12S6.48 2 12 2zm1 14h-2v-6h-2v2h1v4zm0-8h-2V6h2v2z"/>
+                    </svg>
+                  </div>
+                )}
               </div>
 
               {/* Edit button */}
@@ -356,54 +419,24 @@ export default function ProfilePage({ user, onUserUpdate, onLogout }) {
               <span className="text-neutral-300 group-hover:text-neutral-500 group-hover:translate-x-0.5 transition-all">❯</span>
             </button>
 
-            {/* Menu 3: Medical Information */}
+            {/* Menu 3: Verification Status */}
             <button 
-              onClick={() => setActiveModal('medical')}
+              onClick={() => setActiveModal('verification')}
               className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-neutral-50/70 border border-transparent hover:border-neutral-100/50 transition-all text-left focus:outline-none group"
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-9 h-9 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-sm font-semibold">🏥</div>
+                <div className="w-9 h-9 rounded-full bg-cyan-50 text-cyan-605 flex items-center justify-center text-sm font-semibold">🪪</div>
                 <div>
-                  <h4 className="text-xs font-extrabold text-neutral-800">Medical Information</h4>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">Blood Group: {medicalForm.bloodGroup} • 2 records</p>
-                </div>
-              </div>
-              <span className="text-neutral-300 group-hover:text-neutral-500 group-hover:translate-x-0.5 transition-all">❯</span>
-            </button>
-
-            {/* Menu 4: Volunteer Status */}
-            <button 
-              onClick={() => setActiveModal('volunteer')}
-              className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-neutral-50/70 border border-transparent hover:border-neutral-100/50 transition-all text-left focus:outline-none group"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="w-9 h-9 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-sm font-semibold">🤝</div>
-                <div>
-                  <h4 className="text-xs font-extrabold text-neutral-800">Volunteer Status</h4>
+                  <h4 className="text-xs font-extrabold text-neutral-800">Verification Status</h4>
                   <p className="text-[10px] text-neutral-400 mt-0.5">
-                    {volunteerForm.isOnline ? 'Online / Active Volunteer' : 'Offline / Inactive'}
+                    {user?.isIdVerified ? 'Government ID Verified' : 'Verify ID Status'}
                   </p>
                 </div>
               </div>
               <span className="text-neutral-300 group-hover:text-neutral-500 group-hover:translate-x-0.5 transition-all">❯</span>
             </button>
 
-            {/* Menu 5: Verification Status */}
-            <button 
-              onClick={() => setActiveModal('verification')}
-              className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-neutral-50/70 border border-transparent hover:border-neutral-100/50 transition-all text-left focus:outline-none group"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="w-9 h-9 rounded-full bg-cyan-50 text-cyan-600 flex items-center justify-center text-sm font-semibold">🪪</div>
-                <div>
-                  <h4 className="text-xs font-extrabold text-neutral-800">Verification Status</h4>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">Aadhaar Verified</p>
-                </div>
-              </div>
-              <span className="text-neutral-300 group-hover:text-neutral-500 group-hover:translate-x-0.5 transition-all">❯</span>
-            </button>
-
-            {/* Menu 6: Settings */}
+            {/* Menu 4: Settings */}
             <button 
               onClick={() => setActiveModal('settings')}
               className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-neutral-50/70 border border-transparent hover:border-neutral-100/50 transition-all text-left focus:outline-none group"
@@ -412,7 +445,7 @@ export default function ProfilePage({ user, onUserUpdate, onLogout }) {
                 <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center text-sm font-semibold">⚙️</div>
                 <div>
                   <h4 className="text-xs font-extrabold text-neutral-800">Settings</h4>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">Notifications, Privacy, Language</p>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">Notification Settings</p>
                 </div>
               </div>
               <span className="text-neutral-300 group-hover:text-neutral-500 group-hover:translate-x-0.5 transition-all">❯</span>
@@ -492,6 +525,16 @@ export default function ProfilePage({ user, onUserUpdate, onLogout }) {
                   className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800" 
                 />
               </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400">Date of Birth (DOB)</label>
+                <input 
+                  type="date" 
+                  required
+                  value={personalForm.dob}
+                  onChange={(e) => setPersonalForm({ ...personalForm, dob: e.target.value })}
+                  className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800" 
+                />
+              </div>
 
               <div className="flex gap-2.5 mt-3">
                 <button type="button" onClick={() => setActiveModal(null)} className="flex-1 py-2.5 bg-neutral-100 hover:bg-neutral-150 text-neutral-600 font-extrabold rounded-xl text-2xs transition-colors">
@@ -564,184 +607,100 @@ export default function ProfilePage({ user, onUserUpdate, onLogout }) {
           </div>
         </div>
       )}
-
-      {/* OVERLAY MODAL 3: MEDICAL INFORMATION */}
-      {activeModal === 'medical' && (
-        <div className="fixed inset-0 bg-neutral-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white rounded-3xl border border-neutral-100 shadow-2xl p-6 relative flex flex-col scale-up-animation">
-            <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-full transition-colors focus:outline-none">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <h3 className="text-base font-extrabold text-neutral-850">Medical Information</h3>
-            <p className="text-xs text-neutral-400 mt-1">Shared securely with emergency personnel on dispatch:</p>
-
-            <form onSubmit={(e) => { e.preventDefault(); showToast('Medical profile updated'); setActiveModal(null); }} className="flex flex-col gap-3 mt-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400">Blood Group</label>
-                <select 
-                  value={medicalForm.bloodGroup}
-                  onChange={(e) => setMedicalForm({ ...medicalForm, bloodGroup: e.target.value })}
-                  className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800"
-                >
-                  <option value="A+">A+ Positive</option>
-                  <option value="A-">A- Negative</option>
-                  <option value="B+">B+ Positive</option>
-                  <option value="B-">B- Negative</option>
-                  <option value="O+">O+ Positive</option>
-                  <option value="O-">O- Negative</option>
-                  <option value="AB+">AB+ Positive</option>
-                  <option value="AB-">AB- Negative</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400">Drug Allergies</label>
-                <input 
-                  type="text" 
-                  value={medicalForm.allergies}
-                  onChange={(e) => setMedicalForm({ ...medicalForm, allergies: e.target.value })}
-                  className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800" 
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400">Chronic Conditions</label>
-                <input 
-                  type="text" 
-                  value={medicalForm.conditions}
-                  onChange={(e) => setMedicalForm({ ...medicalForm, conditions: e.target.value })}
-                  className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800" 
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400">Emergency Medication</label>
-                <input 
-                  type="text" 
-                  value={medicalForm.medications}
-                  onChange={(e) => setMedicalForm({ ...medicalForm, medications: e.target.value })}
-                  className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800" 
-                />
-              </div>
-
-              <div className="flex gap-2.5 mt-3">
-                <button type="button" onClick={() => setActiveModal(null)} className="flex-1 py-2.5 bg-neutral-100 hover:bg-neutral-150 text-neutral-600 font-extrabold rounded-xl text-2xs transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" className="flex-1 py-2.5 bg-[#1e50bb] hover:bg-[#1a449d] text-white font-extrabold rounded-xl text-2xs transition-colors shadow-md shadow-blue-500/10">
-                  Save Records
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* OVERLAY MODAL 4: VOLUNTEER STATUS */}
-      {activeModal === 'volunteer' && (
-        <div className="fixed inset-0 bg-neutral-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white rounded-3xl border border-neutral-100 shadow-2xl p-6 relative flex flex-col scale-up-animation">
-            <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-full transition-colors focus:outline-none">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <h3 className="text-base font-extrabold text-neutral-850">Volunteer Configuration</h3>
-            <p className="text-xs text-neutral-400 mt-1">Toggle your availability to help nearby requesters:</p>
-
-            {errorMsg && (
-              <div className="mt-3 p-2.5 bg-red-50 border border-red-100 rounded-lg text-3xs font-bold text-red-655 text-center">{errorMsg}</div>
-            )}
-
-            <form onSubmit={handleSaveVolunteer} className="flex flex-col gap-4.5 mt-4">
-              
-              {/* Online toggle */}
-              <div className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-150 rounded-2xl">
-                <div>
-                  <span className="text-xs font-black text-neutral-800">Online Status</span>
-                  <p className="text-[10px] text-neutral-450 mt-0.5">Receive distress alerts en route</p>
-                </div>
-                
-                {/* Custom Switch checkbox toggle */}
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={volunteerForm.isOnline}
-                    onChange={(e) => setVolunteerForm({ ...volunteerForm, isOnline: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                </label>
-              </div>
-
-              {/* Help category checklists */}
-              <div className="flex flex-col gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Offer Assistance categories</span>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  {['blood', 'shelter', 'food', 'transport'].map((type) => {
-                    const isChecked = volunteerForm.helpTypes.includes(type);
-                    return (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => toggleHelpType(type)}
-                        className={`px-3 py-2 rounded-xl border text-center font-bold text-2xs transition-all focus:outline-none capitalize ${
-                          isChecked 
-                            ? 'border-blue-500 bg-blue-50/25 text-blue-650' 
-                            : 'border-neutral-250 hover:bg-neutral-50 text-neutral-500'
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="flex gap-2.5 mt-2">
-                <button type="button" onClick={() => setActiveModal(null)} className="flex-1 py-2.5 bg-neutral-100 hover:bg-neutral-150 text-neutral-600 font-extrabold rounded-xl text-2xs transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" disabled={isLoading} className="flex-1 py-2.5 bg-[#1e50bb] hover:bg-[#1a449d] text-white font-extrabold rounded-xl text-2xs transition-colors shadow-md shadow-blue-500/10">
-                  {isLoading ? 'Saving...' : 'Update Status'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* OVERLAY MODAL 5: VERIFICATION STATUS */}
       {activeModal === 'verification' && (
         <div className="fixed inset-0 bg-neutral-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white rounded-3xl border border-neutral-100 shadow-2xl p-6 relative flex flex-col scale-up-animation text-center items-center">
+          <div className="w-full max-w-sm bg-white rounded-3xl border border-neutral-100 shadow-2xl p-6 relative flex flex-col scale-up-animation items-center">
             <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-full transition-colors focus:outline-none">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             
-            <div className="w-14 h-14 rounded-full bg-green-50 text-green-500 flex items-center justify-center mb-4 text-2xl shadow-inner">
-              🪪
-            </div>
-            
-            <h3 className="text-base font-extrabold text-neutral-850">Aadhaar Verified</h3>
-            <p className="text-xs text-neutral-450 mt-1.5 max-w-[260px] leading-relaxed mx-auto">
-              Your government identity record has been verified against UIDAI databases.
-            </p>
+            {user?.isIdVerified ? (
+              <div className="w-full flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-full bg-green-50 text-green-500 flex items-center justify-center mb-4 text-2xl shadow-inner">
+                  🪪
+                </div>
+                
+                <h3 className="text-base font-extrabold text-neutral-850">Identity Verified</h3>
+                <p className="text-xs text-neutral-450 mt-1.5 max-w-[260px] leading-relaxed mx-auto">
+                  Your government identity record has been verified against databases.
+                </p>
 
-            <div className="w-full bg-neutral-50 border border-neutral-150 rounded-2xl px-4 py-3 mt-5 text-left flex flex-col gap-1">
-              <div className="flex justify-between text-2xs">
-                <span className="text-neutral-400">Aadhaar Card Reference</span>
-                <span className="font-extrabold text-neutral-800">XXXX XXXX 5678</span>
-              </div>
-              <div className="flex justify-between text-2xs">
-                <span className="text-neutral-400">Full Verified Name</span>
-                <span className="font-extrabold text-neutral-800">{user?.name || 'Bhavna Singh'}</span>
-              </div>
-              <div className="flex justify-between text-2xs">
-                <span className="text-neutral-400">Timestamp</span>
-                <span className="font-extrabold text-neutral-800">2026-06-01 10:24</span>
-              </div>
-            </div>
+                <div className="w-full bg-neutral-50 border border-neutral-150 rounded-2xl px-4 py-3 mt-5 text-left flex flex-col gap-1.5">
+                  <div className="flex justify-between text-2xs">
+                    <span className="text-neutral-400">ID Reference Number</span>
+                    <span className="font-extrabold text-neutral-800">XXXX XXXX 5678</span>
+                  </div>
+                  <div className="flex justify-between text-2xs">
+                    <span className="text-neutral-400">Full Verified Name</span>
+                    <span className="font-extrabold text-neutral-800">{user?.name || 'Bhavna Singh'}</span>
+                  </div>
+                  <div className="flex justify-between text-2xs">
+                    <span className="text-neutral-400">Timestamp</span>
+                    <span className="font-extrabold text-neutral-800">2026-06-01 10:24</span>
+                  </div>
+                  <div className="flex justify-between text-2xs">
+                    <span className="text-neutral-400">Status</span>
+                    <span className="font-extrabold text-green-600">Active / Verified</span>
+                  </div>
+                </div>
 
-            <button onClick={() => setActiveModal(null)} className="mt-6 w-full bg-[#1e50bb] hover:bg-[#1a449d] text-white py-3 rounded-xl font-bold transition-all text-xs focus:outline-none">
-              Done
-            </button>
+                <button onClick={() => setActiveModal(null)} className="mt-6 w-full bg-[#1e50bb] hover:bg-[#1a449d] text-white py-3 rounded-xl font-bold transition-all text-xs focus:outline-none shadow-md shadow-blue-500/10">
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div className="w-full flex flex-col">
+                <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mb-4 text-2xl shadow-inner mx-auto">
+                  🪪
+                </div>
+                
+                <h3 className="text-base font-extrabold text-neutral-850 text-center">Verify Identity</h3>
+                <p className="text-xs text-neutral-455 mt-1.5 leading-relaxed text-center">
+                  Verify your account with a government-issued ID card to increase trust.
+                </p>
+
+                {errorMsg && (
+                  <div className="mt-3 p-2 bg-red-50 border border-red-100 rounded-lg text-3xs font-bold text-red-655 text-center">{errorMsg}</div>
+                )}
+
+                <form onSubmit={handleVerifyId} className="flex flex-col gap-3.5 mt-5">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400">Select ID Type</label>
+                    <select 
+                      value={idType}
+                      onChange={(e) => setIdType(e.target.value)}
+                      className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-blue-500 text-neutral-850"
+                    >
+                      <option value="Aadhaar">Aadhaar Card</option>
+                      <option value="Passport">Passport</option>
+                      <option value="VoterId">Voter ID Card</option>
+                      <option value="PanCard">PAN Card</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400">Government ID Number</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="e.g. 12-digit Aadhaar / Passport no."
+                      value={idNumber}
+                      onChange={(e) => setIdNumber(e.target.value)}
+                      className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-blue-500 text-neutral-850" 
+                    />
+                  </div>
+
+                  <div className="flex gap-2.5 mt-2">
+                    <button type="button" onClick={() => setActiveModal(null)} className="flex-1 py-2.5 bg-neutral-100 hover:bg-neutral-150 text-neutral-600 font-extrabold rounded-xl text-2xs transition-colors">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={isLoading} className="flex-1 py-2.5 bg-[#1e50bb] hover:bg-[#1a449d] text-white font-extrabold rounded-xl text-2xs transition-colors shadow-md shadow-blue-500/10 flex items-center justify-center">
+                      {isLoading ? 'Verifying...' : 'Verify Now'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -753,45 +712,74 @@ export default function ProfilePage({ user, onUserUpdate, onLogout }) {
             <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-full transition-colors focus:outline-none">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <h3 className="text-base font-extrabold text-neutral-800">App Settings</h3>
-            <p className="text-xs text-neutral-400 mt-1">Configure notifications and language:</p>
+            <h3 className="text-base font-extrabold text-neutral-850">Notification Settings</h3>
+            <p className="text-xs text-neutral-400 mt-1">Configure emergency alerts preferences:</p>
 
-            <form onSubmit={(e) => { e.preventDefault(); showToast('Settings saved'); setActiveModal(null); }} className="flex flex-col gap-4 mt-4">
+            {errorMsg && (
+              <div className="mt-3 p-2 bg-red-50 border border-red-100 rounded-lg text-3xs font-bold text-red-655 text-center">{errorMsg}</div>
+            )}
+
+            <form onSubmit={handleSaveSettings} className="flex flex-col gap-4 mt-4">
               
-              {/* Notification Toggle */}
-              <div className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-100 rounded-xl">
+              {/* Push Notifications Toggle */}
+              <div className="flex items-center justify-between p-3.5 bg-neutral-50 border border-neutral-100 rounded-2xl">
                 <div>
                   <span className="text-2xs font-extrabold text-neutral-800">Push Notifications</span>
-                  <p className="text-[9px] text-neutral-400 mt-0.5">Receive alerts for emergency updates</p>
+                  <p className="text-[9px] text-neutral-400 mt-0.5">Receive immediate alerts for distress requests</p>
                 </div>
-                <input type="checkbox" defaultChecked className="w-4 h-4 text-blue-600 accent-blue-600 cursor-pointer" />
+                
+                {/* Custom Switch checkbox toggle */}
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={notificationSettings.pushEnabled}
+                    onChange={(e) => setNotificationSettings({ ...notificationSettings, pushEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-neutral-250 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                </label>
               </div>
 
-              {/* Private profile toggle */}
-              <div className="flex items-center justify-between p-3 bg-neutral-50 border border-neutral-100 rounded-xl">
+              {/* SMS Notifications Toggle */}
+              <div className="flex items-center justify-between p-3.5 bg-neutral-50 border border-neutral-100 rounded-2xl">
                 <div>
-                  <span className="text-2xs font-extrabold text-neutral-800">Private Profile Mode</span>
-                  <p className="text-[9px] text-neutral-400 mt-0.5">Mask phone number to general users</p>
+                  <span className="text-2xs font-extrabold text-neutral-800">SMS Alerts</span>
+                  <p className="text-[9px] text-neutral-400 mt-0.5">Send notification SMS messages to contacts</p>
                 </div>
-                <input type="checkbox" className="w-4 h-4 text-blue-600 accent-blue-600 cursor-pointer" />
+                
+                {/* Custom Switch checkbox toggle */}
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={notificationSettings.smsEnabled}
+                    onChange={(e) => setNotificationSettings({ ...notificationSettings, smsEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-neutral-250 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                </label>
               </div>
 
-              {/* Language choice */}
+              {/* Sound alert dropdown */}
               <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400">Language Preference</label>
-                <select className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-850">
-                  <option value="en">English (US)</option>
-                  <option value="hi">Hindi (हिन्दी)</option>
-                  <option value="es">Spanish (Español)</option>
+                <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400">Distress Ringtone/Alert Sound</label>
+                <select 
+                  value={notificationSettings.soundType}
+                  onChange={(e) => setNotificationSettings({ ...notificationSettings, soundType: e.target.value })}
+                  className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-blue-500 text-neutral-850"
+                >
+                  <option value="siren">Emergency Ambulance Siren</option>
+                  <option value="high-pitch">High-Pitch Chime</option>
+                  <option value="chime">Subtle Alert Chime</option>
+                  <option value="default">System Default Vibration</option>
                 </select>
               </div>
 
-              <div className="flex gap-2.5 mt-2">
+              <div className="flex gap-2.5 mt-2.5">
                 <button type="button" onClick={() => setActiveModal(null)} className="flex-1 py-2.5 bg-neutral-100 hover:bg-neutral-150 text-neutral-600 font-extrabold rounded-xl text-2xs transition-colors">
                   Cancel
                 </button>
-                <button type="submit" className="flex-1 py-2.5 bg-[#1e50bb] hover:bg-[#1a449d] text-white font-extrabold rounded-xl text-2xs transition-colors shadow-md shadow-blue-500/10">
-                  Save Settings
+                <button type="submit" disabled={isLoading} className="flex-1 py-2.5 bg-[#1e50bb] hover:bg-[#1a449d] text-white font-extrabold rounded-xl text-2xs transition-colors shadow-md shadow-blue-500/10">
+                  {isLoading ? 'Saving...' : 'Save Settings'}
                 </button>
               </div>
             </form>

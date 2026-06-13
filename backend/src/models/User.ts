@@ -16,6 +16,14 @@ export interface IUser extends Document {
   };
   isOnline: boolean;
   helpTypes: ('blood' | 'shelter' | 'food' | 'transport')[];
+  dob: string;
+  emergencyContacts: { name: string; phone: string; relation: string }[];
+  isIdVerified: boolean;
+  notificationSettings: {
+    pushEnabled: boolean;
+    smsEnabled: boolean;
+    soundType: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,6 +87,36 @@ const userSchema: Schema = new Schema(
       type: [String],
       enum: ['blood', 'shelter', 'food', 'transport'],
       default: [],
+    },
+    dob: {
+      type: String,
+      default: '',
+    },
+    emergencyContacts: {
+      type: [{
+        name: { type: String, required: true },
+        phone: { type: String, required: true },
+        relation: { type: String, default: '' }
+      }],
+      default: [],
+    },
+    isIdVerified: {
+      type: Boolean,
+      default: false,
+    },
+    notificationSettings: {
+      pushEnabled: {
+        type: Boolean,
+        default: true,
+      },
+      smsEnabled: {
+        type: Boolean,
+        default: true,
+      },
+      soundType: {
+        type: String,
+        default: 'siren',
+      }
     },
   },
   {
