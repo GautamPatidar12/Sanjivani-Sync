@@ -3,6 +3,7 @@ import EmergencyType from './EmergencyType.jsx';
 import Severity from './Severity.jsx';
 import LocationContacts from './LocationContacts.jsx';
 import RequestProcessing from './RequestProcessing.jsx';
+import LiveTracking from './LiveTracking.jsx';
 
 const resourceTypes = [
   { id: 'blood', name: 'Blood Donor', iconColor: 'text-red-500 bg-red-50', icon: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z' },
@@ -39,9 +40,12 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     else if (currentHash === '#/sos/tracking') sosStep = 'tracking';
   }
 
+  const isLocked = activeTab === 'sos' && (sosStep === 'processing');
+
   const [selectedEmergency, setSelectedEmergency] = useState(null);
   const [selectedSeverity, setSelectedSeverity] = useState(null);
   const [activeContacts, setActiveContacts] = useState([]);
+  const [createdRequestId, setCreatedRequestId] = useState(null);
   
   const [selectedFormResource, setSelectedFormResource] = useState(null);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
@@ -94,9 +98,10 @@ export default function Dashboard({ user, onLogout, currentHash }) {
       {/* Navigation Sidebar (Desktop) / Bottom Bar (Mobile) */}
       <div className="bg-white border-t md:border-t-0 md:border-r border-neutral-100/80 px-6 md:px-0 py-2.5 md:py-8 flex md:flex-col justify-between md:justify-start items-center z-20 order-last md:order-first md:w-24 md:h-full shrink-0 md:gap-8">
         <button
+          disabled={isLocked}
           onClick={() => window.location.hash = '#/dashboard'}
           type="button"
-          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 md:w-full ${activeTab === 'home' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all w-14 md:w-full ${activeTab === 'home' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
         >
           <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-current" viewBox="0 0 24 24">
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
@@ -105,9 +110,10 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         </button>
 
         <button
+          disabled={isLocked}
           onClick={() => window.location.hash = '#/resources'}
           type="button"
-          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 md:w-full ${activeTab === 'resources' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all w-14 md:w-full ${activeTab === 'resources' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
         >
           <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-current" viewBox="0 0 24 24">
             <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
@@ -116,11 +122,12 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         </button>
 
         <button
+          disabled={isLocked}
           onClick={() => {
             window.location.hash = '#/sos/type';
           }}
           type="button"
-          className="relative flex flex-col items-center justify-center focus:outline-none transition-transform active:scale-95 z-30 w-16 -mt-6 md:mt-0 md:mb-2 md:w-full"
+          className={`relative flex flex-col items-center justify-center focus:outline-none transition-all active:scale-95 z-30 w-16 -mt-6 md:mt-0 md:mb-2 md:w-full ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
         >
           <div className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-[#d61c24] flex items-center justify-center text-white shadow-lg shadow-red-500/30 border-4 border-white md:border-red-50 font-extrabold text-[10px] md:text-xs tracking-wider uppercase">
             SOS
@@ -129,9 +136,10 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         </button>
 
         <button
+          disabled={isLocked}
           onClick={() => window.location.hash = '#/profile'}
           type="button"
-          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 md:w-full md:mt-auto ${activeTab === 'profile' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all w-14 md:w-full md:mt-auto ${activeTab === 'profile' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
         >
           <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-current" viewBox="0 0 24 24">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -391,6 +399,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                   selectedEmergency={selectedEmergency}
                   selectedSeverity={selectedSeverity}
                   activeContacts={activeContacts}
+                  setCreatedRequestId={setCreatedRequestId}
                   onCancel={() => {
                     window.location.hash = '#/sos/location-contacts';
                   }}
@@ -402,73 +411,16 @@ export default function Dashboard({ user, onLogout, currentHash }) {
 
               {/* SUBSTEP 5: LIVE DISTRESS BEACON TRACKER */}
               {sosStep === 'tracking' && (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-                  {!activeSosCancelled ? (
-                    <>
-                      <div className="w-24 h-24 rounded-full bg-red-500/10 flex items-center justify-center text-red-600 mb-6 relative">
-                        <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-25" />
-                        <svg className="w-12 h-12 animate-wiggle" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                      </div>
-
-                      <h2 className="text-xl font-black text-red-655 tracking-wide uppercase">Active Emergency Mode</h2>
-                      <div className="bg-red-500/20 text-red-600 font-extrabold px-4 py-1.5 rounded-full text-2xs tracking-widest mt-3 animate-pulse">
-                        LIVE TRACKING EN ROUTE
-                      </div>
-                      
-                      <div className="text-center mt-2.5 bg-red-50 border border-red-100 rounded-xl px-3 py-2 text-3xs font-bold text-red-750">
-                        Type: {selectedEmergency ? selectedEmergency.title : 'General'} | Severity: {selectedSeverity ? selectedSeverity.toUpperCase() : 'Critical'}
-                      </div>
-                      
-                      <p className="text-xs text-neutral-400 mt-4 max-w-[280px]">
-                        Distress beacons active. Your location has been shared with emergency responders.
-                      </p>
-
-                      <div className="bg-neutral-50 rounded-2xl border border-neutral-100 p-4 w-full mt-6 flex flex-col gap-2">
-                        <div className="flex items-center justify-between text-2xs">
-                          <span className="text-neutral-400">Duration Active</span>
-                          <span className="font-extrabold text-neutral-800">{sosActiveSeconds}s</span>
-                        </div>
-                        <div className="flex items-center justify-between text-2xs">
-                          <span className="text-neutral-400">Notified Contacts</span>
-                          <span className="font-extrabold text-blue-650">{activeContacts.length} numbers</span>
-                        </div>
-                        <div className="flex items-center justify-between text-2xs">
-                          <span className="text-neutral-400">Responder Dispatch Status</span>
-                          <span className="font-extrabold text-green-500">Contacted</span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => setActiveSosCancelled(true)}
-                        type="button"
-                        className="mt-8 bg-neutral-900 hover:bg-neutral-850 text-white font-bold px-8 py-3 rounded-xl text-xs transition-colors shadow-lg"
-                      >
-                        Cancel Active Distress
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 mb-4">
-                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                      </div>
-                      <h2 className="text-lg font-bold text-neutral-800">Distress Beacons Cancelled</h2>
-                      <p className="text-xs text-neutral-400 mt-2 max-w-[240px]">The emergency alert has been closed. Automatic coordinate logging is paused.</p>
-                      
-                      <button
-                        onClick={() => {
-                          setActiveSosCancelled(false);
-                          window.location.hash = '#/dashboard';
-                        }}
-                        type="button"
-                        className="mt-6 bg-[#d61c24] hover:bg-[#b31018] text-white font-bold px-6 py-2.5 rounded-xl text-xs transition-colors"
-                      >
-                        Return to Home
-                      </button>
-                    </>
-                  )}
-                </div>
+                <LiveTracking
+                  user={user}
+                  selectedEmergency={selectedEmergency}
+                  selectedSeverity={selectedSeverity}
+                  activeContacts={activeContacts}
+                  createdRequestId={createdRequestId}
+                  onCancel={() => {
+                    window.location.hash = '#/dashboard';
+                  }}
+                />
               )}
 
             </div>

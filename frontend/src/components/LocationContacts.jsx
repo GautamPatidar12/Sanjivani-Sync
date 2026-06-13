@@ -23,7 +23,7 @@ export default function LocationContacts({ onBack, onConfirm }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between relative">
+    <div className="flex-1 flex flex-col justify-between relative max-w-xl mx-auto w-full md:bg-white/60 md:backdrop-blur-xl md:border md:border-neutral-100/60 md:shadow-xl md:shadow-neutral-250/20 md:rounded-3xl md:p-8">
       
       {/* Scrollable Container block */}
       <div>
