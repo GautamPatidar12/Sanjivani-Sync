@@ -222,3 +222,16 @@ export const getMyAssignments = async (req: AuthRequest, res: Response): Promise
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+// 8. Get All Pending Help Requests (regardless of capability, sorted by recency)
+export const getAllPendingHelpRequests = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const requests = await HelpRequest.find({ status: 'pending' })
+      .sort({ createdAt: -1 })
+      .populate('requester', 'name email contactNumber location');
+    res.json(requests);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
