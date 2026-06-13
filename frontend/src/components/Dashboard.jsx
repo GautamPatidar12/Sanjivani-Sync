@@ -308,47 +308,21 @@ export default function Dashboard({ user, onLogout, currentHash }) {
 
         <button
           disabled={isLocked}
-          onClick={() => window.location.hash = '#/resources'}
-          type="button"
-          className={`flex flex-col items-center justify-center gap-1 focus:outline-none transition-all flex-1 md:flex-none md:w-full ${activeTab === 'resources' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
-        >
-          <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-current" viewBox="0 0 24 24">
-            <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
-          </svg>
-          <span className="text-3xs font-extrabold tracking-tight">Resources</span>
-        </button>
-
-        <button
-          disabled={isLocked}
           onClick={() => window.location.hash = '#/listings'}
           type="button"
-          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all w-14 md:w-full ${activeTab === 'listings' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all flex-1 md:flex-none md:w-full ${activeTab === 'listings' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
         >
           <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-none stroke-current" strokeWidth={2.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
           </svg>
-          <span className="text-3xs font-extrabold tracking-tight">Listings</span>
-        </button>
-
-        <button
-          disabled={isLocked}
-          onClick={() => {
-            window.location.hash = '#/sos/type';
-          }}
-          type="button"
-          className={`relative flex flex-col items-center justify-center focus:outline-none transition-all active:scale-95 z-30 w-16 -mt-6 md:mt-0 md:mb-2 md:w-full ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
-        >
-          <div className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-[#d61c24] flex items-center justify-center text-white shadow-lg shadow-red-500/30 border-4 border-white md:border-red-50 font-extrabold text-[10px] md:text-xs tracking-wider uppercase">
-            SOS
-          </div>
-          <span className={`text-3xs font-extrabold tracking-tight mt-1 ${activeTab === 'sos' ? 'text-[#d61c24]' : 'text-neutral-400'}`}>SOS</span>
+          <span className="text-3xs font-extrabold tracking-tight">Alerts</span>
         </button>
 
         <button
           disabled={isLocked}
           onClick={() => window.location.hash = '#/profile'}
           type="button"
-          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all w-14 md:w-full md:mt-auto ${activeTab === 'profile' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
+          className={`flex flex-col items-center gap-1.5 focus:outline-none transition-all flex-1 md:flex-none md:w-full md:mt-auto ${activeTab === 'profile' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'} ${isLocked ? 'pointer-events-none opacity-30' : ''}`}
         >
           <svg className="w-5.5 h-5.5 md:w-6 md:h-6 fill-current" viewBox="0 0 24 24">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
