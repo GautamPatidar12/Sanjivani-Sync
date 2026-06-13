@@ -461,7 +461,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                       onClick={() => window.location.hash = '#/resources'}
                       className="text-2xs font-extrabold text-blue-600 hover:underline hover:text-blue-700 transition-colors"
                     >
-                      View All
+                      <p class="hidden">View All</p>
                     </button>
                   </div>
 
