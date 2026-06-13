@@ -81,6 +81,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (!user.password) {
+      res.status(401).json({ message: 'Invalid credentials. Please use Google Login if you signed up with Google.' });
+      return;
+    }
+
     // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
 
