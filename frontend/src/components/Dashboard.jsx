@@ -12,9 +12,32 @@ const resourceTypes = [
   { id: 'transport', name: 'Transport', iconColor: 'text-indigo-500 bg-indigo-50', icon: 'M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm13-6l-1.88-5.64c-.19-.57-.72-.96-1.32-.96H8.2c-.6 0-1.13.39-1.32.96L5 9v6c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V9zm-10.8 4c-.66 0-1.2-.54-1.2-1.2 0-.66.54-1.2 1.2-1.2.66 0 1.2.54 1.2 1.2 0 .66-.54 1.2-1.2 1.2zm7.6 0c-.66 0-1.2-.54-1.2-1.2 0-.66.54-1.2 1.2-1.2.66 0 1.2.54 1.2 1.2 0 .66-.54 1.2-1.2 1.2z' }
 ];
 
-export default function Dashboard({ phone, selectedCountry, onLogout }) {
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'resources' | 'sos' | 'profile'
-  const [sosStep, setSosStep] = useState('type'); // 'type' | 'severity' | 'location-contacts' | 'processing' | 'tracking'
+const severityLevels = [
+  { id: 'minor', title: 'Minor', desc: 'No immediate danger', color: 'border-green-500 ring-green-500/10 text-green-650 bg-green-50' },
+  { id: 'serious', title: 'Serious', desc: 'Urgent attention needed', color: 'border-orange-500 ring-orange-500/10 text-orange-600 bg-orange-50' },
+  { id: 'critical', title: 'Critical', desc: 'Life-threatening', color: 'border-red-500 ring-red-500/10 text-red-600 bg-red-50' }
+];
+
+export default function Dashboard({ phone, selectedCountry, onLogout, currentHash }) {
+  // Determine active Tab and SOS Step based on global URL hash
+  let activeTab = 'home';
+  let sosStep = 'type';
+
+  if (currentHash === '#/dashboard') {
+    activeTab = 'home';
+  } else if (currentHash === '#/resources') {
+    activeTab = 'resources';
+  } else if (currentHash === '#/profile') {
+    activeTab = 'profile';
+  } else if (currentHash.startsWith('#/sos')) {
+    activeTab = 'sos';
+    if (currentHash === '#/sos/type') sosStep = 'type';
+    else if (currentHash === '#/sos/severity') sosStep = 'severity';
+    else if (currentHash === '#/sos/location-contacts') sosStep = 'location-contacts';
+    else if (currentHash === '#/sos/processing') sosStep = 'processing';
+    else if (currentHash === '#/sos/tracking') sosStep = 'tracking';
+  }
+
   const [selectedEmergency, setSelectedEmergency] = useState(null);
   const [selectedSeverity, setSelectedSeverity] = useState(null);
   const [activeContacts, setActiveContacts] = useState([]);
@@ -32,10 +55,9 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
   const [activeSosCancelled, setActiveSosCancelled] = useState(false);
   const [sosActiveSeconds, setSosActiveSeconds] = useState(0);
 
-  // Reset SOS sub-flow steps when tab changes
+  // Sync state variables reset when navigating away from SOS page
   useEffect(() => {
     if (activeTab !== 'sos') {
-      setSosStep('type');
       setSelectedEmergency(null);
       setSelectedSeverity(null);
       setActiveSosCancelled(false);
@@ -64,11 +86,12 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
     }, 2200);
   };
 
+  const isConfigRoute = activeTab === 'sos' && (sosStep === 'type' || sosStep === 'severity' || sosStep === 'location-contacts' || sosStep === 'processing');
+
   return (
     <>
       {/* Dashboard Core Header View */}
-      {/* Do not show standard dashboard header if activeTab is SOS and we are in select configurations */}
-      {!(activeTab === 'sos' && (sosStep === 'type' || sosStep === 'severity' || sosStep === 'location-contacts' || sosStep === 'processing')) && (
+      {!isConfigRoute && (
         <div className="flex justify-between items-center px-6 pt-5 pb-3 bg-white border-b border-neutral-50/50">
           <div>
             <h2 className="text-xs font-semibold text-neutral-400 tracking-wider">Good Evening,</h2>
@@ -138,8 +161,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
                 <div className="absolute w-[240px] h-[240px] rounded-full bg-red-500/5 filter blur-2xl animate-pulse" />
                 <button
                   onClick={() => {
-                    setActiveTab('sos');
-                    setSosStep('type');
+                    window.location.hash = '#/sos/type';
                   }}
                   type="button"
                   className="relative w-36 h-36 rounded-full bg-red-50 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95 group focus:outline-none"
@@ -157,9 +179,9 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
               {/* Quick Resources */}
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-extrabold text-neutral-850">Quick Resources</h3>
+                  <h3 className="text-sm font-extrabold text-neutral-855">Quick Resources</h3>
                   <button 
-                    onClick={() => setActiveTab('resources')}
+                    onClick={() => window.location.hash = '#/resources'}
                     className="text-2xs font-extrabold text-blue-600 hover:underline hover:text-blue-700 transition-colors"
                   >
                     View All
@@ -190,9 +212,9 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
               {/* Nearby Resources */}
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-extrabold text-neutral-850">Nearby Resources</h3>
+                  <h3 className="text-sm font-extrabold text-neutral-855">Nearby Resources</h3>
                   <button 
-                    onClick={() => setActiveTab('resources')}
+                    onClick={() => window.location.hash = '#/resources'}
                     className="text-2xs font-extrabold text-blue-600 hover:underline hover:text-blue-700 transition-colors"
                   >
                     View All
@@ -244,7 +266,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
           {activeTab === 'resources' && (
             <div className="flex-1 flex flex-col gap-4">
               <div className="flex items-center gap-2">
-                <button onClick={() => setActiveTab('home')} className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
+                <button onClick={() => window.location.hash = '#/dashboard'} className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
                 <h2 className="text-lg font-bold text-neutral-800">Resources Directory</h2>
               </div>
               <p className="text-xs text-neutral-400">Select an emergency category below to log a resource request or find nearby support groups:</p>
@@ -281,10 +303,10 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
               {/* SUBSTEP 1: EMERGENCY TYPE SELECTION */}
               {sosStep === 'type' && (
                 <EmergencyType 
-                  onBack={() => setActiveTab('home')}
+                  onBack={() => window.location.hash = '#/dashboard'}
                   onContinue={(emergency) => {
                     setSelectedEmergency(emergency);
-                    setSosStep('severity');
+                    window.location.hash = '#/sos/severity';
                   }}
                 />
               )}
@@ -292,10 +314,10 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
               {/* SUBSTEP 2: SEVERITY SELECTION */}
               {sosStep === 'severity' && (
                 <Severity 
-                  onBack={() => setSosStep('type')}
+                  onBack={() => window.location.hash = '#/sos/type'}
                   onSelect={(severity) => {
                     setSelectedSeverity(severity);
-                    setSosStep('location-contacts');
+                    window.location.hash = '#/sos/location-contacts';
                   }}
                 />
               )}
@@ -303,15 +325,15 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
               {/* SUBSTEP 3: LOCATION & CONTACTS CONFIRMATION */}
               {sosStep === 'location-contacts' && (
                 <LocationContacts
-                  onBack={() => setSosStep('severity')}
+                  onBack={() => window.location.hash = '#/sos/severity'}
                   onConfirm={(contacts) => {
                     setActiveContacts(contacts);
-                    setSosStep('processing');
+                    window.location.hash = '#/sos/processing';
                   }}
                 />
               )}
 
-              {/* SUBSTEP 4: REQUEST PROCESSING (Design Pending) */}
+              {/* SUBSTEP 4: REQUEST PROCESSING */}
               {sosStep === 'processing' && (
                 <div className="flex-1 flex flex-col justify-between items-center text-center p-4">
                   <div className="my-auto flex flex-col items-center">
@@ -327,14 +349,13 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
                       Contacting nearest responders and establishing GPS tracking nodes.
                     </p>
 
-                    {/* Simulation progress bar */}
                     <div className="w-56 bg-neutral-150 h-1.5 rounded-full overflow-hidden mt-6 relative">
                       <div className="bg-[#d61c24] h-full rounded-full animate-[progress-pulse_2s_infinite]" style={{ width: '40%' }} />
                     </div>
                   </div>
 
                   <button
-                    onClick={() => setSosStep('tracking')}
+                    onClick={() => window.location.hash = '#/sos/tracking'}
                     type="button"
                     className="w-full py-3.5 bg-[#d61c24] hover:bg-[#b31018] text-white font-bold rounded-xl text-xs shadow-md shadow-red-500/10 flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 focus:outline-none"
                   >
@@ -356,7 +377,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
                         </svg>
                       </div>
 
-                      <h2 className="text-xl font-black text-red-650 tracking-wide uppercase">Active Emergency Mode</h2>
+                      <h2 className="text-xl font-black text-red-655 tracking-wide uppercase">Active Emergency Mode</h2>
                       <div className="bg-red-500/20 text-red-600 font-extrabold px-4 py-1.5 rounded-full text-2xs tracking-widest mt-3 animate-pulse">
                         LIVE TRACKING EN ROUTE
                       </div>
@@ -369,7 +390,6 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
                         Distress beacons active. Your location has been shared with emergency responders.
                       </p>
 
-                      {/* Display notified active contacts count */}
                       <div className="bg-neutral-50 rounded-2xl border border-neutral-100 p-4 w-full mt-6 flex flex-col gap-2">
                         <div className="flex items-center justify-between text-2xs">
                           <span className="text-neutral-400">Duration Active</span>
@@ -402,7 +422,10 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
                       <p className="text-xs text-neutral-400 mt-2 max-w-[240px]">The emergency alert has been closed. Automatic coordinate logging is paused.</p>
                       
                       <button
-                        onClick={() => { setActiveSosCancelled(false); setActiveTab('home'); }}
+                        onClick={() => {
+                          setActiveSosCancelled(false);
+                          window.location.hash = '#/dashboard';
+                        }}
                         type="button"
                         className="mt-6 bg-[#d61c24] hover:bg-[#b31018] text-white font-bold px-6 py-2.5 rounded-xl text-xs transition-colors"
                       >
@@ -420,7 +443,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
           {activeTab === 'profile' && (
             <div className="flex-1 flex flex-col gap-4">
               <div className="flex items-center gap-2">
-                <button onClick={() => setActiveTab('home')} className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
+                <button onClick={() => window.location.hash = '#/dashboard'} className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg></button>
                 <h2 className="text-lg font-bold text-neutral-800">Emergency Profile</h2>
               </div>
 
@@ -465,10 +488,10 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
         </div>
       </div>
 
-      {/* Bottom Navigation Tab Bar */}
+      {/* Bottom Navigation Tab Bar (Syncs with Global URL hashes) */}
       <div className="bg-white border-t border-neutral-100/80 px-6 py-2.5 flex justify-between items-center z-20">
         <button
-          onClick={() => setActiveTab('home')}
+          onClick={() => window.location.hash = '#/dashboard'}
           type="button"
           className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 ${activeTab === 'home' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
         >
@@ -479,7 +502,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
         </button>
 
         <button
-          onClick={() => setActiveTab('resources')}
+          onClick={() => window.location.hash = '#/resources'}
           type="button"
           className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 ${activeTab === 'resources' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
         >
@@ -491,8 +514,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
 
         <button
           onClick={() => {
-            setActiveTab('sos');
-            setSosStep('type');
+            window.location.hash = '#/sos/type';
           }}
           type="button"
           className="relative flex flex-col items-center justify-center focus:outline-none transition-transform active:scale-95 z-30 w-16 -mt-6"
@@ -504,7 +526,7 @@ export default function Dashboard({ phone, selectedCountry, onLogout }) {
         </button>
 
         <button
-          onClick={() => setActiveTab('profile')}
+          onClick={() => window.location.hash = '#/profile'}
           type="button"
           className={`flex flex-col items-center gap-1.5 focus:outline-none transition-colors w-14 ${activeTab === 'profile' ? 'text-[#d61c24]' : 'text-neutral-400 hover:text-neutral-500'}`}
         >

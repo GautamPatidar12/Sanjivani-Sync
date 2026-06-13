@@ -14,10 +14,10 @@ const countriesList = [
   { name: 'Japan', code: '+81', flag: '🇯🇵' },
 ];
 
-export default function Login({ onSuccess }) {
-  const [step, setStep] = useState('phone'); // 'phone' | 'otp'
-  const [phone, setPhone] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(countriesList[0]);
+export default function Login({ onSuccess, currentHash, phone, setPhone, selectedCountry, setSelectedCountry }) {
+  // Determine step based on global URL hash
+  const step = currentHash === '#/verify' ? 'otp' : 'phone';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -27,6 +27,13 @@ export default function Login({ onSuccess }) {
 
   const dropdownRef = useRef(null);
   const countryButtonRef = useRef(null);
+
+  // Set default country code if not set
+  useEffect(() => {
+    if (!selectedCountry) {
+      setSelectedCountry(countriesList[0]);
+    }
+  }, [selectedCountry, setSelectedCountry]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -70,7 +77,8 @@ export default function Login({ onSuccess }) {
       setPhoneError(true);
       return;
     }
-    setStep('otp');
+    // Update hash path to transition to OTP screen
+    window.location.hash = '#/verify';
     setResendTimer(30);
     setOtp(['', '', '', '', '', '']);
     setOtpError(false);
@@ -114,7 +122,7 @@ export default function Login({ onSuccess }) {
     
     // Accept demo OTP code "123456"
     if (otpCode === '123456') {
-      onSuccess(phone, selectedCountry);
+      onSuccess(phone, selectedCountry || countriesList[0]);
     } else {
       setOtpError(true);
     }
@@ -134,6 +142,8 @@ export default function Login({ onSuccess }) {
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.code.includes(searchQuery)
   );
+
+  const activeCountry = selectedCountry || countriesList[0];
 
   return (
     <>
@@ -164,8 +174,8 @@ export default function Login({ onSuccess }) {
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="flex items-center gap-1 text-neutral-800 font-bold text-sm focus:outline-none"
                   >
-                    <span>{selectedCountry.flag}</span>
-                    <span>{selectedCountry.code}</span>
+                    <span>{activeCountry.flag}</span>
+                    <span>{activeCountry.code}</span>
                     <svg className="w-3 h-3 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                   </button>
 
@@ -221,13 +231,13 @@ export default function Login({ onSuccess }) {
             <div className="bg-white rounded-3xl border border-neutral-100 shadow-xl shadow-neutral-100/50 p-6">
               <form onSubmit={handleOtpSubmit} className="flex flex-col">
                 <div className="flex items-center justify-between">
-                  <button type="button" onClick={() => setStep('phone')} className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-500 transition-colors focus:outline-none">
+                  <button type="button" onClick={() => window.location.hash = '#/login'} className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-500 transition-colors focus:outline-none">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
                   </button>
                   <h2 className="text-lg font-bold text-center text-neutral-800 pr-7 flex-1">OTP Verification</h2>
                 </div>
                 <p className="text-xs text-neutral-400 text-center mt-2">
-                  We've sent a 6-digit confirmation code to <span className="font-semibold text-neutral-800">{selectedCountry.code} {phone}</span>
+                  We've sent a 6-digit confirmation code to <span className="font-semibold text-neutral-800">{activeCountry.code} {phone}</span>
                 </p>
 
                 <div className="flex justify-between gap-2 mt-6">
