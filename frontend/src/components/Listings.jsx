@@ -412,7 +412,7 @@ export default function Listings({ user, onBack }) {
               <div className="text-xs text-neutral-600 leading-relaxed bg-white border border-neutral-100 rounded-xl p-3">
                 <strong>Situation Details:</strong>
                 <p className="mt-1 font-semibold">{selectedItem.description}</p>
-                <div className="mt-2 text-[10px] text-neutral-400">
+                <div className="mt-2 text-[10px] text-neutral-600 font-semibold">
                   <strong>Address:</strong> {selectedItem.location.address}
                 </div>
               </div>
@@ -476,7 +476,7 @@ export default function Listings({ user, onBack }) {
                             item.urgency === 'critical' ? 'bg-red-500' : 'bg-orange-500'
                           }`} />
                         </h4>
-                        <p className="text-[10px] text-neutral-400 mt-0.5 line-clamp-1 max-w-[180px] sm:max-w-xs">{item.location.address}</p>
+                        <p className="text-[10px] text-neutral-600 font-semibold mt-0.5 line-clamp-1 max-w-[180px] sm:max-w-xs">{item.location.address}</p>
                       </div>
                     </div>
                     <span className="text-3xs text-neutral-400 font-bold bg-neutral-50 px-2.5 py-1 rounded-md uppercase">

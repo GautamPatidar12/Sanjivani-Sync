@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import EmergencyType from './EmergencyType.jsx';
 import Severity from './Severity.jsx';
 import LocationContacts from './LocationContacts.jsx';
@@ -50,6 +50,16 @@ export default function Dashboard({ user, onLogout, currentHash }) {
   const [activeContacts, setActiveContacts] = useState([]);
   const [createdRequestId, setCreatedRequestId] = useState(null);
 
+  // 3-second hold SOS states
+  const [holdProgress, setHoldProgress] = useState(0);
+  const [isHolding, setIsHolding] = useState(false);
+  const holdTimerRef = useRef(null);
+  const holdStartRef = useRef(0);
+
+  // Active alerts nearby (Give Help Console)
+  const [activeAlerts, setActiveAlerts] = useState([]);
+  const [isOnline, setIsOnline] = useState(true);
+
   const [nearbyResources, setNearbyResources] = useState([
     { id: 'amb', title: 'Ambulances', count: 2, distance: 5, icon: 'M19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm13-6l-1.88-5.64c-.19-.57-.72-.96-1.32-.96H8.2c-.6 0-1.13.39-1.32.96L5 9v6c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V9z', color: 'green' },
     { id: 'hosp', title: 'Hospitals', count: 3, distance: 3, icon: 'M19 3H5c-1.1 0-1.99.9-1.99 2L3 19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z', color: 'blue' },
@@ -68,7 +78,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
         // Play subtle positive ping (base64 simple tick/ping)
         const audio = new Audio('data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTEAAAAcHR0eHh4fHx8fHyAgICAhISEhISEiIiIiIyMjIyMjJCQkJCUlJSUlJg==');
         audio.volume = 0.1;
-        audio.play().catch(e => {}); // Ignore play errors (user interaction rules)
+        audio.play().catch(e => { }); // Ignore play errors (user interaction rules)
       }, 5000);
       return () => clearInterval(interval);
     }
@@ -85,7 +95,13 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     contact: user?.contactNumber || '98765 43210',
     address: user?.location?.address || 'Unknown Address',
     description: '',
-    urgency: 'High'
+    urgency: 'high',
+    bloodGroup: 'A+',
+    foodType: 'Vegetarian',
+    peopleCount: '1',
+    prescription: '',
+    passengers: '1',
+    skills: 'General Help'
   });
 
   const [activeSosCancelled, setActiveSosCancelled] = useState(false);
@@ -107,7 +123,8 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     address: user?.location?.address || '',
     age: '',
     gender: 'Prefer not to say',
-    bloodGroup: 'Unknown'
+    bloodGroup: 'Unknown',
+    emergencyContacts: user?.emergencyContacts || []
   });
   const [emergencyContacts, setEmergencyContacts] = useState([]);
   const [newContact, setNewContact] = useState({ name: '', relation: '', phone: '' });
@@ -167,6 +184,8 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     }
   }, [activeTab, storageSuffix, user]);
 
+
+
   // Fetch providers when category is selected
   useEffect(() => {
     if (selectedResourceCategory) {
@@ -203,6 +222,117 @@ export default function Dashboard({ user, onLogout, currentHash }) {
       fetchProviders();
     }
   }, [selectedResourceCategory, user]);
+
+  // SOS hold progress event handlers
+  const handleHoldStart = (e) => {
+    e.preventDefault();
+    if (navigator.vibrate) navigator.vibrate(50);
+    setIsHolding(true);
+    holdStartRef.current = Date.now();
+    holdTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - holdStartRef.current;
+      const progress = Math.min(100, (elapsed / 3000) * 100);
+      setHoldProgress(progress);
+      if (elapsed >= 3000) {
+        clearInterval(holdTimerRef.current);
+        if (navigator.vibrate) navigator.vibrate(300);
+        setHoldProgress(0);
+        setIsHolding(false);
+        window.location.hash = '#/sos/type'; // Go to first step of SOS selection
+      }
+    }, 30);
+  };
+
+  const handleHoldEnd = () => {
+    if (holdTimerRef.current) {
+      clearInterval(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    setIsHolding(false);
+    setHoldProgress(0);
+  };
+
+  // Toggle availability status on backend
+  const toggleAvailability = async () => {
+    const nextStatus = !isOnline;
+    setIsOnline(nextStatus);
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('token') || user?.token;
+      
+      const response = await fetch(`${API_URL}/api/users/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          isOnline: nextStatus,
+          location: {
+            address: user?.location?.address || 'Current Location',
+            coordinates: user?.location?.coordinates?.coordinates || [77.5946, 12.9716]
+          }
+        })
+      });
+      if (!response.ok) {
+        console.error('Failed to update online status on server');
+      }
+    } catch (err) {
+      console.error('Error updating status:', err);
+    }
+  };
+
+  // Fetch active dispatches nearby
+  const fetchActiveAlerts = async () => {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('token') || user?.token;
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/help-requests/all-pending`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveAlerts(data.slice(0, 3)); // show top 3 alerts
+      }
+    } catch (err) {
+      console.error('Error fetching active alerts:', err);
+    }
+  };
+
+  // Poll active alerts and auto-set online on server
+  useEffect(() => {
+    if (activeTab === 'home') {
+      const forceOnlineOnServer = async () => {
+        try {
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          const token = localStorage.getItem('token') || user?.token;
+          if (!token) return;
+          await fetch(`${API_URL}/api/users/status`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              isOnline: true,
+              location: {
+                address: user?.location?.address || 'Current Location',
+                coordinates: user?.location?.coordinates?.coordinates || [77.5946, 12.9716]
+              }
+            })
+          });
+        } catch (err) {
+          console.error('Failed to auto-set online status on server:', err);
+        }
+      };
+
+      forceOnlineOnServer();
+      fetchActiveAlerts();
+      const interval = setInterval(fetchActiveAlerts, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, user]);
 
   const savePersonalDetails = async (e) => {
     e.preventDefault();
@@ -358,14 +488,48 @@ export default function Dashboard({ user, onLogout, currentHash }) {
     return () => clearInterval(interval);
   }, [activeTab, sosStep, activeSosCancelled]);
 
-  const handleResourceFormSubmit = (e) => {
+  const handleResourceFormSubmit = async (e) => {
     e.preventDefault();
-    setRequestSubmitted(true);
-    setTimeout(() => {
-      setSelectedResourceCategory(null);
-      setIsShowingResourceForm(false);
-      setRequestSubmitted(false);
-    }, 2200);
+
+    // Construct description based on type
+    let finalDescription = formInputs.description;
+    if (selectedFormResource?.id === 'blood') finalDescription = `Blood Group Needed: ${formInputs.bloodGroup} | ${finalDescription}`;
+    if (selectedFormResource?.id === 'food') finalDescription = `Food Preference: ${formInputs.foodType} | ${finalDescription}`;
+    if (selectedFormResource?.id === 'shelter') finalDescription = `People needing shelter: ${formInputs.peopleCount} | ${finalDescription}`;
+    if (selectedFormResource?.id === 'medicine') finalDescription = `Medical Details: ${formInputs.prescription} | ${finalDescription}`;
+    if (selectedFormResource?.id === 'transport') finalDescription = `Passengers: ${formInputs.passengers} | ${finalDescription}`;
+    if (selectedFormResource?.id === 'volunteer') finalDescription = `Required Skills: ${formInputs.skills} | ${finalDescription}`;
+
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('token');
+      await fetch(`${API_URL}/api/help-requests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          helpType: selectedFormResource?.id || 'volunteer',
+          description: finalDescription,
+          urgency: formInputs.urgency,
+          location: {
+            address: formInputs.address,
+            coordinates: user?.location?.coordinates?.coordinates || [0, 0]
+          }
+        })
+      });
+      setRequestSubmitted(true);
+      setTimeout(() => {
+        setSelectedFormResource(null);
+        setRequestSubmitted(false);
+        // Automatically jump to listings to see the active requests!
+        window.location.hash = '#/listings';
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit request');
+    }
   };
 
   const isConfigRoute = activeTab === 'sos' && (sosStep === 'type' || sosStep === 'severity' || sosStep === 'location-contacts' || sosStep === 'processing');
@@ -373,7 +537,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
   return (
     <div className="flex flex-col md:flex-row w-full h-full relative">
       {/* Navigation Sidebar (Desktop) / Bottom Bar (Mobile) */}
-      <div className="bg-white border-t md:border-t-0 md:border-r border-neutral-100/80 px-6 md:px-0 py-2.5 md:py-8 flex md:flex-col justify-between md:justify-start items-center z-20 order-last md:order-first md:w-24 md:h-full shrink-0 md:gap-8">
+      <div className="bg-neutral-50 md:bg-neutral-100/60 border-t md:border-t-0 md:border-r border-neutral-200/90 px-6 md:px-0 py-2.5 md:py-8 flex md:flex-col justify-between md:justify-start items-center z-20 order-last md:order-first md:w-24 md:h-full shrink-0 md:gap-8">
         <button
           disabled={isLocked}
           onClick={() => window.location.hash = '#/dashboard'}
@@ -446,118 +610,254 @@ export default function Dashboard({ user, onLogout, currentHash }) {
             {/* TAB 1: HOME */}
             {activeTab === 'home' && (
               <>
-                {/* Emergency Profile verified banner */}
+                {/* Verified profile header */}
                 <div className="w-full bg-white rounded-2xl border border-neutral-100 shadow-md shadow-neutral-100/50 p-4 flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-neutral-800">Emergency Profile</h3>
+                    <h3 className="text-sm font-bold text-neutral-855">Verified Emergency Profile</h3>
                     <span className="inline-flex items-center gap-1 text-2xs font-extrabold text-green-600 mt-1">
-                      Verified
+                      Verified Identity
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                     </span>
                   </div>
 
                   <div className="text-right w-1/2">
                     <div className="flex justify-between items-center text-3xs font-semibold text-neutral-400 mb-1">
-                      <span>Complete Contacts</span>
-                      <span className="font-extrabold text-neutral-800">90%</span>
+                      <span>Responder Availability</span>
+                      <span className="font-extrabold text-neutral-800">{isOnline ? 'Online' : 'Offline'}</span>
                     </div>
-                    <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-green-50 h-full rounded-full" style={{ width: '90%' }} />
+                    <div className="w-full bg-neutral-100 h-3 rounded-full overflow-hidden p-0.5 border border-neutral-200/80">
+                      <div className={`h-full rounded-full transition-all duration-500 ${isOnline ? 'bg-gradient-to-r from-green-400 to-emerald-600 shadow-sm' : 'bg-gradient-to-r from-amber-400 to-orange-500 shadow-sm'}`} style={{ width: isOnline ? '100%' : '50%' }} />
                     </div>
                   </div>
                 </div>
 
-                {/* Central SOS Button */}
-                <div className="w-full bg-white rounded-3xl border border-neutral-100 shadow-md shadow-neutral-100/50 p-6 flex flex-col items-center justify-center relative overflow-hidden group">
-                  <div className="absolute w-[240px] h-[240px] rounded-full bg-red-500/5 filter blur-2xl animate-pulse" />
-                  <button
-                    onClick={() => {
-                      window.location.hash = '#/sos/type';
-                    }}
-                    type="button"
-                    className="relative w-36 h-36 rounded-full bg-red-50 flex items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95 group focus:outline-none"
-                  >
-                    <div className="absolute inset-2 rounded-full border border-red-200 animate-ping opacity-20 pointer-events-none" />
-                    <div className="absolute inset-0 rounded-full bg-red-100 scale-95 group-hover:scale-100 transition-all duration-300 pointer-events-none" />
-
-                    <div className="absolute inset-3 rounded-full bg-[#d61c24] flex flex-col items-center justify-center shadow-lg shadow-red-500/30 text-white z-10">
-                      <span className="text-3xl font-black tracking-wider leading-none">SOS</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest mt-1.5 text-red-100">Tap for Help</span>
+                {/* Unified Get Help / Give Help Grid Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 w-full">
+                  
+                  {/* CONSOLE 1: GET EMERGENCY HELP */}
+                  <div className="flex flex-col gap-5 bg-white rounded-3xl border border-neutral-100 shadow-md shadow-neutral-100/30 p-5 md:p-6">
+                    <div className="flex items-center gap-2 border-b border-neutral-50 pb-3">
+                      <span className="flex h-2.5 w-2.5 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                      </span>
+                      <h3 className="text-xs font-black uppercase tracking-wider text-neutral-800">Distress Console (Get Help)</h3>
                     </div>
-                  </button>
-                </div>
 
-                {/* Quick Resources */}
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-extrabold text-neutral-855">Quick Resources</h3>
-                    <button
-                      onClick={() => window.location.hash = '#/resources'}
-                      className="text-2xs font-extrabold text-blue-600 hover:underline hover:text-blue-700 transition-colors"
-                    >
-                      View All
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-5">
-                    {resourceTypes.map((res) => (
+                    {/* SOS Button holding box */}
+                    <div className="w-full bg-red-50/10 rounded-2xl border border-red-100/50 p-6 flex flex-col items-center justify-center relative overflow-hidden group shadow-inner">
+                      <div className="absolute w-[240px] h-[240px] rounded-full bg-red-500/5 filter blur-2xl animate-pulse pointer-events-none" />
+                      
                       <button
-                        key={res.id}
-                        onClick={() => setSelectedFormResource(res)}
+                        onMouseDown={handleHoldStart}
+                        onMouseUp={handleHoldEnd}
+                        onMouseLeave={handleHoldEnd}
+                        onTouchStart={handleHoldStart}
+                        onTouchEnd={handleHoldEnd}
                         type="button"
-                        className="bg-white hover:bg-red-50/20 border border-neutral-100 hover:border-red-100 rounded-xl p-3.5 flex flex-col items-center text-center transition-all duration-200 focus:outline-none active:scale-[0.97]"
+                        className={`relative w-40 h-40 rounded-full bg-red-50 flex items-center justify-center cursor-pointer transition-transform duration-300 ${isHolding ? 'scale-95' : 'hover:scale-105'} group focus:outline-none select-none`}
                       >
-                        <div className={`p-2.5 rounded-full ${res.iconColor} mb-2`}>
-                          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                            <path d={res.icon} />
-                          </svg>
+                        {/* Circular Progress Ring */}
+                        <svg className="absolute inset-0 w-full h-full transform -rotate-90 pointer-events-none" viewBox="0 0 100 100">
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="44"
+                            fill="transparent"
+                            stroke="rgba(214, 28, 36, 0.08)"
+                            strokeWidth="5"
+                          />
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="44"
+                            fill="transparent"
+                            stroke="#d61c24"
+                            strokeWidth="5"
+                            strokeDasharray={2 * Math.PI * 44}
+                            strokeDashoffset={2 * Math.PI * 44 * (1 - holdProgress / 100)}
+                            strokeLinecap="round"
+                            className="transition-all duration-75 ease-out"
+                          />
+                        </svg>
+
+                        {/* Button Core */}
+                        <div className={`absolute inset-4 rounded-full flex flex-col items-center justify-center shadow-lg transition-all duration-300 ${
+                          isHolding ? 'bg-[#b31018] shadow-red-600/30' : 'bg-[#d61c24] shadow-red-500/30'
+                        } text-white z-10`}>
+                          <span className="text-3xl font-black tracking-wider leading-none">SOS</span>
+                          <span className="text-[8px] font-black uppercase tracking-widest mt-1.5 text-red-100">
+                            {isHolding ? `${Math.ceil((100 - holdProgress) / 33)}s...` : 'Hold to Alert'}
+                          </span>
                         </div>
-                        <span className="text-3xs font-extrabold text-neutral-700 tracking-tight leading-snug">
-                          {res.name}
-                        </span>
                       </button>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Nearby Resources */}
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-extrabold text-neutral-855">Nearby Resources</h3>
-                    <button
-                      onClick={() => window.location.hash = '#/resources'}
-                      className="text-2xs font-extrabold text-blue-600 hover:underline hover:text-blue-700 transition-colors"
-                    >
-                      View All
-                    </button>
-                  </div>
-
-                  <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 md:flex-wrap">
-                    {nearbyResources.map((res) => (
-                      <div key={res.id} className={`flex-shrink-0 bg-white border border-neutral-100 rounded-xl p-3 flex flex-col gap-2 w-40 md:w-48 lg:w-56 transition-all hover:border-${res.color}-100 hover:shadow-md relative group`}>
-                        <button 
-                          onClick={() => removeNearbyResource(res.id)}
-                          className="absolute top-2 right-2 text-neutral-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
-                        >
-                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                        </button>
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg bg-${res.color}-50 text-${res.color}-600`}>
-                            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                              <path d={res.icon} />
-                            </svg>
-                          </div>
-                          <div>
-                            <h4 className="text-2xs font-bold text-neutral-800">{res.count} {res.title}</h4>
-                            <span className="text-3xs text-neutral-400">Within {res.distance} km</span>
-                          </div>
-                        </div>
+                      <div className="flex flex-col items-center mt-4 gap-1 select-none">
+                        <span className="text-[13px] font-extrabold tracking-widest text-[#d61c24] uppercase animate-pulse">TAP FOR HELP</span>
+                        <p className="text-3xs text-neutral-450 font-semibold text-center max-w-[200px] leading-relaxed">
+                          {isHolding ? 'Holding dispatch beacon...' : 'Press and hold for 3 seconds to dispatch immediate nearby emergency teams.'}
+                        </p>
                       </div>
-                    ))}
-                    {nearbyResources.length === 0 && (
-                      <div className="text-2xs text-neutral-400 italic py-2">No nearby resources tracking active.</div>
-                    )}
+                    </div>
+
+                    {/* Quick Resources */}
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[11px] font-black uppercase tracking-wider text-neutral-800">Quick Resource Request</h4>
+                        <button
+                          onClick={() => window.location.hash = '#/resources'}
+                          className="text-3xs font-extrabold text-blue-600 hover:underline transition-colors"
+                        >
+                          View All
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {resourceTypes.map((res) => (
+                          <button
+                            key={res.id}
+                            onClick={() => setSelectedFormResource(res)}
+                            type="button"
+                            className="bg-white hover:bg-red-50/20 border border-neutral-100 hover:border-red-100 rounded-xl p-2.5 flex flex-col items-center text-center transition-all duration-200 focus:outline-none active:scale-[0.97]"
+                          >
+                            <div className={`p-2 rounded-full ${res.iconColor} mb-1.5`}>
+                              <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+                                <path d={res.icon} />
+                              </svg>
+                            </div>
+                            <span className="text-3xs font-black text-neutral-700 tracking-tight leading-snug">
+                              {res.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Nearby Resources */}
+                    <div className="flex flex-col gap-3 border-t border-neutral-50 pt-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[11px] font-black uppercase tracking-wider text-neutral-800">Nearby Resources</h4>
+                        <span className="text-3xs font-extrabold text-[#d61c24] flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#d61c24] animate-ping" />
+                          Live Radar
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {nearbyResources.map((res) => (
+                          <div
+                            key={res.id}
+                            className="bg-white border border-neutral-100 rounded-xl p-3 flex flex-col items-center text-center relative group shadow-2xs hover:shadow-sm transition-all duration-200"
+                          >
+                            {/* Dismiss button */}
+                            <button
+                              onClick={() => removeNearbyResource(res.id)}
+                              type="button"
+                              className="absolute top-1.5 right-1.5 w-4.5 h-4.5 rounded-full bg-neutral-100 hover:bg-red-50 text-neutral-455 hover:text-[#d61c24] flex items-center justify-center text-[10px] font-bold focus:outline-none transition-colors opacity-0 group-hover:opacity-100 shadow-sm"
+                              title="Dismiss"
+                            >
+                              ×
+                            </button>
+                            <div className={`p-2.5 rounded-full ${
+                              res.color === 'green' ? 'text-green-600 bg-green-50' :
+                              res.color === 'blue' ? 'text-blue-600 bg-blue-50' : 'text-red-655 bg-red-50'
+                            } mb-2 shadow-2xs`}>
+                              <svg className="w-5.5 h-5.5 fill-current" viewBox="0 0 24 24">
+                                <path d={res.icon} />
+                              </svg>
+                            </div>
+                            <h5 className="text-[10px] font-extrabold text-neutral-800 leading-tight">
+                              {res.count} {res.title}
+                            </h5>
+                            <span className="text-3xs text-neutral-450 font-bold mt-1">
+                              {res.distance} km away
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
+
+                  {/* CONSOLE 2: GIVE HELP / RESPONDER RADAR */}
+                  <div className="flex flex-col gap-5 bg-white rounded-3xl border border-neutral-100 shadow-md shadow-neutral-100/30 p-5 md:p-6">
+                    <div className="flex items-center gap-2 border-b border-neutral-50 pb-3">
+                      <span className="flex h-2.5 w-2.5 relative">
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isOnline ? 'bg-green-400' : 'bg-amber-400'} opacity-75`}></span>
+                        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isOnline ? 'bg-green-600' : 'bg-amber-500'}`}></span>
+                      </span>
+                      <h3 className="text-xs font-black uppercase tracking-wider text-neutral-800">Responder Console (Give Help)</h3>
+                    </div>
+
+                    {/* Active Dispatch Monitor indicator */}
+                    <div className="bg-green-50/50 rounded-2xl border border-green-100 p-4.5 flex items-center gap-3.5 shadow-sm">
+                      <div className="bg-green-100 text-green-700 w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 animate-pulse">
+                        📡
+                      </div>
+                      <div>
+                        <h4 className="text-2xs font-extrabold text-neutral-800 flex items-center gap-1.5">
+                          Active Dispatch Monitor
+                          <span className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
+                        </h4>
+                        <p className="text-[10px] text-green-700/90 leading-relaxed mt-0.5">
+                          Always active. Continuously scanning for local distress beacons.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Active dispatches nearby */}
+                    <div className="flex flex-col gap-3 flex-1">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[11px] font-black uppercase tracking-wider text-neutral-800">Nearby Distress Beacons</h4>
+                        <button
+                          onClick={() => window.location.hash = '#/listings'}
+                          className="text-3xs font-extrabold text-blue-600 hover:underline transition-colors"
+                        >
+                          Incident Map
+                        </button>
+                      </div>
+
+                      <div className="flex-1 flex flex-col gap-2.5 justify-center">
+                        {activeAlerts.length === 0 ? (
+                          <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-neutral-150 rounded-2xl p-4 text-center bg-neutral-50/20 py-8 min-h-[140px]">
+                            <span className="text-lg">📡</span>
+                            <h4 className="text-[10px] font-bold text-neutral-600 mt-1">Radar Scanning...</h4>
+                            <p className="text-3xs text-neutral-450 max-w-[180px] mt-0.5 leading-relaxed">
+                              No pending emergency distress dispatches found nearby.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            {activeAlerts.map(alert => (
+                              <div
+                                key={alert._id}
+                                className="bg-white border border-neutral-100 hover:border-red-100 rounded-xl p-3 flex items-center justify-between shadow-2xs hover:shadow-sm transition-all cursor-pointer"
+                                onClick={() => window.location.hash = '#/listings'}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="text-lg flex-shrink-0">🚨</span>
+                                  <div>
+                                    <h5 className="text-[11px] font-black text-neutral-800 uppercase flex items-center gap-1.5 leading-none">
+                                      {alert.helpType}
+                                      <span className={`w-1.5 h-1.5 rounded-full ${
+                                        alert.urgency === 'critical' ? 'bg-red-500 animate-pulse' : 'bg-orange-400'
+                                      }`} />
+                                    </h5>
+                                    <p className="text-[10px] text-neutral-600 font-semibold mt-1 line-clamp-1 max-w-[150px] sm:max-w-xs leading-none">
+                                      {alert.location.address}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-[9px] font-black text-white bg-[#d61c24] hover:bg-[#b31018] px-2.5 py-1.5 rounded-lg transition-colors uppercase leading-none">
+                                  Help
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </>
             )}
@@ -625,6 +925,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                 {/* SUBSTEP 3: LOCATION & CONTACTS CONFIRMATION */}
                 {sosStep === 'location-contacts' && (
                   <LocationContacts
+                    user={user}
                     onBack={() => window.location.hash = '#/sos/severity'}
                     onConfirm={(contacts) => {
                       setActiveContacts(contacts);
@@ -1239,6 +1540,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                   </div>
                 )}
 
+
               </div>
             )}
 
@@ -1319,12 +1621,97 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                     <textarea
                       required
                       rows={2.5}
-                      placeholder="Specify quantities, prescriptions, or blood group details..."
+                      placeholder="Specify quantities, or additional details..."
                       value={formInputs.description}
                       onChange={(e) => setFormInputs({ ...formInputs, description: e.target.value })}
                       className="w-full text-xs font-semibold px-3 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:border-red-500 text-neutral-800 resize-none"
                     />
                   </div>
+
+                  {/* DYNAMIC FORM FIELDS BASED ON CATEGORY */}
+                  {selectedFormResource.id === 'blood' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-red-500">Required Blood Group</label>
+                      <select
+                        value={formInputs.bloodGroup}
+                        onChange={(e) => setFormInputs({ ...formInputs, bloodGroup: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-red-50 rounded-xl border border-red-200 focus:outline-none focus:border-red-500 text-red-800 cursor-pointer"
+                      >
+                        <option value="A+">A+</option><option value="A-">A-</option>
+                        <option value="B+">B+</option><option value="B-">B-</option>
+                        <option value="O+">O+</option><option value="O-">O-</option>
+                        <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedFormResource.id === 'food' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-amber-600">Dietary Preference</label>
+                      <select
+                        value={formInputs.foodType}
+                        onChange={(e) => setFormInputs({ ...formInputs, foodType: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-amber-50 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 text-amber-800 cursor-pointer"
+                      >
+                        <option value="Vegetarian">Vegetarian</option>
+                        <option value="Vegan">Vegan</option>
+                        <option value="Non-Vegetarian">Non-Vegetarian</option>
+                        <option value="Any">Any</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedFormResource.id === 'shelter' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-blue-600">Number of People</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formInputs.peopleCount}
+                        onChange={(e) => setFormInputs({ ...formInputs, peopleCount: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-blue-50 rounded-xl border border-blue-200 focus:outline-none focus:border-blue-500 text-blue-800"
+                      />
+                    </div>
+                  )}
+
+                  {selectedFormResource.id === 'medicine' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-teal-600">Medical Specifics</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Insulin, Inhaler, First Aid"
+                        value={formInputs.prescription}
+                        onChange={(e) => setFormInputs({ ...formInputs, prescription: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-teal-50 rounded-xl border border-teal-200 focus:outline-none focus:border-teal-500 text-teal-800"
+                      />
+                    </div>
+                  )}
+
+                  {selectedFormResource.id === 'transport' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-indigo-600">Passengers</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formInputs.passengers}
+                        onChange={(e) => setFormInputs({ ...formInputs, passengers: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-indigo-50 rounded-xl border border-indigo-200 focus:outline-none focus:border-indigo-500 text-indigo-800"
+                      />
+                    </div>
+                  )}
+
+                  {selectedFormResource.id === 'volunteer' && (
+                    <div className="flex flex-col gap-1 animate-scaleUp">
+                      <label className="text-3xs font-extrabold uppercase tracking-wider text-emerald-600">Required Skills</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Doctor, Search & Rescue, Labor"
+                        value={formInputs.skills}
+                        onChange={(e) => setFormInputs({ ...formInputs, skills: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2.5 bg-emerald-50 rounded-xl border border-emerald-200 focus:outline-none focus:border-emerald-500 text-emerald-800"
+                      />
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-1">
                     <label className="text-3xs font-extrabold uppercase tracking-wider text-neutral-400">Urgency Level</label>
@@ -1350,6 +1737,7 @@ export default function Dashboard({ user, onLogout, currentHash }) {
                 </button>
               </form>
             )}
+  
           </div>
         </div>
       )}

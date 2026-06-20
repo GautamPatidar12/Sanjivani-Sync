@@ -59,7 +59,7 @@ export const toggleOnlineStatus = async (req: AuthRequest, res: Response): Promi
 
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, contactNumber, location, helpTypes } = req.body;
+    const { name, contactNumber, location, helpTypes, emergencyContacts } = req.body;
 
     const user = await User.findById(req.user.id);
 
@@ -85,6 +85,10 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       user.helpTypes = helpTypes;
     }
 
+    if (emergencyContacts) {
+      user.emergencyContacts = emergencyContacts;
+    }
+
     const updatedUser = await user.save();
 
     res.json({
@@ -98,6 +102,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
         isOnline: updatedUser.isOnline,
         location: updatedUser.location,
         helpTypes: updatedUser.helpTypes,
+        emergencyContacts: updatedUser.emergencyContacts,
       },
     });
   } catch (error: any) {
