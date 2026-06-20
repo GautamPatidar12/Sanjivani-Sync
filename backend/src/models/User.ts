@@ -30,6 +30,13 @@ export interface IUser extends Document {
     selected: boolean;
     avatar?: string;
   }[];
+  dob: string;
+  isIdVerified: boolean;
+  notificationSettings: {
+    pushEnabled: boolean;
+    smsEnabled: boolean;
+    soundType: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
