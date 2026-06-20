@@ -5,11 +5,27 @@ import webpush from 'web-push';
 import dotenv from 'dotenv';
 dotenv.config();
 
-webpush.setVapidDetails(
-  'mailto:support@sanjivanisync.com',
-  process.env.VAPID_PUBLIC_KEY || '',
-  process.env.VAPID_PRIVATE_KEY || ''
-);
+let publicKey = process.env.VAPID_PUBLIC_KEY || '';
+let privateKey = process.env.VAPID_PRIVATE_KEY || '';
+
+if (!publicKey || !privateKey) {
+  try {
+    const keys = webpush.generateVAPIDKeys();
+    publicKey = keys.publicKey;
+    privateKey = keys.privateKey;
+    console.warn('⚠️ WARNING: VAPID keys not configured in environment. Generated temporary fallback VAPID keys for development.');
+  } catch (err: any) {
+    console.error('Failed to generate fallback VAPID keys:', err.message);
+  }
+}
+
+if (publicKey && privateKey) {
+  webpush.setVapidDetails(
+    'mailto:support@sanjivanisync.com',
+    publicKey,
+    privateKey
+  );
+}
 
 interface AuthRequest extends Request {
   user?: any;

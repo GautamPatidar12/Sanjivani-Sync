@@ -23,6 +23,13 @@ export interface IUser extends Document {
       auth: string;
     };
   }[];
+  emergencyContacts?: {
+    name: string;
+    relation: string;
+    phone: string;
+    selected: boolean;
+    avatar?: string;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -104,8 +111,10 @@ const userSchema: Schema = new Schema(
     emergencyContacts: {
       type: [{
         name: { type: String, required: true },
+        relation: { type: String, default: '' },
         phone: { type: String, required: true },
-        relation: { type: String, default: '' }
+        selected: { type: Boolean, default: true },
+        avatar: { type: String, default: '' },
       }],
       default: [],
     },

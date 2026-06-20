@@ -111,17 +111,43 @@ export default function Listings({ user, onBack }) {
     }
   };
 
-  // Poll pending alerts every 3 seconds for quick response listing
+  // Randomly update active listings every 15 sec lap till one is selected
   useEffect(() => {
     fetchAlerts();
     fetchMissions();
 
     const interval = setInterval(() => {
-      fetchAlerts();
-    }, 3000);
+      // Fetch fresh data occasionally, but primarily we perturb locations randomly for visual activity
+      setAlerts(prevAlerts => {
+        if (selectedItem) return prevAlerts; // Don't perturb if one is actively selected
+        
+        // Randomly perturb the coordinates to simulate active movement
+        return prevAlerts.map(alert => {
+          if (!alert.location?.coordinates?.coordinates) return alert;
+          const coords = alert.location.coordinates.coordinates;
+          const newLng = coords[0] + (Math.random() - 0.5) * 0.004;
+          const newLat = coords[1] + (Math.random() - 0.5) * 0.004;
+          return {
+            ...alert,
+            location: {
+              ...alert.location,
+              coordinates: {
+                ...alert.location.coordinates,
+                coordinates: [newLng, newLat]
+              }
+            }
+          };
+        });
+      });
+      // Also occasionally fetch to make sure we don't miss new ones
+      if (Math.random() > 0.5) {
+         fetchAlerts();
+      }
+      fetchMissions();
+    }, 15000);
 
     return () => clearInterval(interval);
-  }, [user?.token]);
+  }, [selectedItem, user?.token]);
 
   // Update lists and markers when subtab changes
   useEffect(() => {
@@ -386,7 +412,7 @@ export default function Listings({ user, onBack }) {
               <div className="text-xs text-neutral-600 leading-relaxed bg-white border border-neutral-100 rounded-xl p-3">
                 <strong>Situation Details:</strong>
                 <p className="mt-1 font-semibold">{selectedItem.description}</p>
-                <div className="mt-2 text-[10px] text-neutral-400">
+                <div className="mt-2 text-[10px] text-neutral-600 font-semibold">
                   <strong>Address:</strong> {selectedItem.location.address}
                 </div>
               </div>
@@ -450,7 +476,7 @@ export default function Listings({ user, onBack }) {
                             item.urgency === 'critical' ? 'bg-red-500' : 'bg-orange-500'
                           }`} />
                         </h4>
-                        <p className="text-[10px] text-neutral-400 mt-0.5 line-clamp-1 max-w-[180px] sm:max-w-xs">{item.location.address}</p>
+                        <p className="text-[10px] text-neutral-600 font-semibold mt-0.5 line-clamp-1 max-w-[180px] sm:max-w-xs">{item.location.address}</p>
                       </div>
                     </div>
                     <span className="text-3xs text-neutral-400 font-bold bg-neutral-50 px-2.5 py-1 rounded-md uppercase">

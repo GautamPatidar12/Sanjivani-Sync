@@ -125,9 +125,9 @@ export default function LiveTracking({
     // Custom icons matching the high fidelity mockups
     const patientIcon = window.L.divIcon({
       html: `<div class="relative w-8 h-8 flex items-center justify-center">
-               <div class="absolute w-7 h-7 rounded-full bg-blue-500/20 animate-ping"></div>
-               <div class="absolute w-5 h-5 rounded-full bg-blue-500/35"></div>
-               <div class="w-3 h-3 bg-blue-600 border border-white rounded-full shadow-md"></div>
+               <div class="absolute w-7 h-7 rounded-full bg-red-500/20 animate-ping"></div>
+               <div class="absolute w-5 h-5 rounded-full bg-red-500/35"></div>
+               <div class="w-3 h-3 bg-red-655 border border-white rounded-full shadow-md"></div>
              </div>`,
       className: 'custom-leaflet-icon',
       iconSize: [32, 32],
@@ -161,7 +161,7 @@ export default function LiveTracking({
 
     // Add routing line path
     const routeLine = window.L.polyline([[startHelperLat, startHelperLng], userLatLng], {
-      color: '#1e50bb',
+      color: '#d61c24',
       weight: 4.5,
       dashArray: '4, 8',
       lineCap: 'round'
@@ -476,7 +476,7 @@ export default function LiveTracking({
             <button 
               onClick={() => setShowCallModal(true)}
               type="button"
-              className="bg-[#1e50bb] hover:bg-[#1a449d] text-white py-3 px-3.5 rounded-xl text-2xs font-extrabold flex items-center justify-center gap-1.5 transition-colors focus:outline-none active:scale-95 shadow-md shadow-blue-500/10"
+              className="bg-[#d61c24] hover:bg-[#b31018] text-white py-3 px-3.5 rounded-xl text-2xs font-extrabold flex items-center justify-center gap-1.5 transition-colors focus:outline-none active:scale-95 shadow-md shadow-red-500/10"
             >
               <svg className="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
                 <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
@@ -488,7 +488,7 @@ export default function LiveTracking({
             <button 
               onClick={() => setShowChatDrawer(true)}
               type="button"
-              className="bg-[#1e50bb] hover:bg-[#1a449d] text-white py-3 px-3.5 rounded-xl text-2xs font-extrabold flex items-center justify-center gap-1.5 transition-colors focus:outline-none active:scale-95 shadow-md shadow-blue-500/10"
+              className="bg-[#d61c24] hover:bg-[#b31018] text-white py-3 px-3.5 rounded-xl text-2xs font-extrabold flex items-center justify-center gap-1.5 transition-colors focus:outline-none active:scale-95 shadow-md shadow-red-500/10"
             >
               <svg className="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
                 <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z" />
@@ -500,7 +500,7 @@ export default function LiveTracking({
             <button 
               onClick={handleShare}
               type="button"
-              className="bg-[#1e50bb] hover:bg-[#1a449d] text-white py-3 px-3.5 rounded-xl text-2xs font-extrabold flex items-center justify-center gap-1.5 transition-colors focus:outline-none active:scale-95 shadow-md shadow-blue-500/10"
+              className="bg-[#d61c24] hover:bg-[#b31018] text-white py-3 px-3.5 rounded-xl text-2xs font-extrabold flex items-center justify-center gap-1.5 transition-colors focus:outline-none active:scale-95 shadow-md shadow-red-500/10"
             >
               <svg className="w-4 h-4 stroke-current fill-none" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 10.742l4.636-2.576m0 0a3 3 0 10-1.343-2.576m1.343 2.576a3 3 0 11-1.343 2.576m-4.636 2.576l4.636 2.576m0 0a3 3 0 121.343-2.576m-1.343 2.576a3 3 0 101.343 2.576" />
@@ -550,7 +550,7 @@ export default function LiveTracking({
               
               <a 
                 href={`tel:${responderInfo.phone.replace(/\s+/g, '')}`}
-                className="mt-6 w-full bg-[#1e50bb] hover:bg-[#1a449d] text-white py-3.5 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/10 focus:outline-none"
+                className="mt-6 w-full bg-[#d61c24] hover:bg-[#b31018] text-white py-3.5 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 shadow-md shadow-red-500/10 focus:outline-none"
               >
                 <span>Call Now</span>
               </a>
@@ -595,7 +595,7 @@ export default function LiveTracking({
                   <div key={idx} className={`flex flex-col max-w-[80%] ${isUser ? 'self-end items-end' : 'self-start items-start'}`}>
                     <div className={`px-4 py-3 rounded-2xl text-xs leading-relaxed font-semibold ${
                       isUser 
-                        ? 'bg-[#1e50bb] text-white rounded-tr-none' 
+                        ? 'bg-[#d61c24] text-white rounded-tr-none' 
                         : 'bg-white border border-neutral-100 text-neutral-850 rounded-tl-none shadow-sm'
                     }`}>
                       {msg.text}
@@ -618,7 +618,7 @@ export default function LiveTracking({
               />
               <button 
                 type="submit"
-                className="w-10 h-10 bg-[#1e50bb] hover:bg-[#1a449d] text-white rounded-xl flex items-center justify-center shadow-md transition-colors focus:outline-none"
+                className="w-10 h-10 bg-[#d61c24] hover:bg-[#b31018] text-white rounded-xl flex items-center justify-center shadow-md transition-colors focus:outline-none"
               >
                 <svg className="w-4.5 h-4.5 fill-current text-white transform rotate-45" viewBox="0 0 24 24">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
