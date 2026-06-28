@@ -131,20 +131,20 @@ export default function Signup({ onSuccess, currentHash }) {
         <div className="relative" ref={langDropdownRef}>
           <button 
             onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-[10px] sm:text-xs font-semibold text-slate-700 transition-all shadow-sm cursor-pointer select-none"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-all shadow-sm cursor-pointer select-none"
           >
             <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10" />
               <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
             </svg>
             <span>{currentLanguage}</span>
-            <svg className="w-2.5 h-2.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path d="M19 9l-7 7-7-7" />
             </svg>
           </button>
           
           {showLanguageDropdown && (
-            <div className="absolute right-0 mt-1 w-28 bg-white border border-slate-100 rounded-xl shadow-lg py-1 z-30 animate-fadeIn">
+            <div className="absolute right-0 mt-1 w-28 bg-white border border-slate-100 rounded-xl shadow-lg py-1.5 z-30 animate-fadeIn">
               {languages.map((lang) => (
                 <button
                   key={lang}
@@ -195,15 +195,15 @@ export default function Signup({ onSuccess, currentHash }) {
 
         {/* Right Side (Floating Card Form) */}
         <div className="md:w-1/2 w-full max-w-sm md:max-w-md relative z-10 flex-shrink-0">
-          <div className="bg-white rounded-2xl md:rounded-3xl p-4 sm:p-8 shadow-lg shadow-slate-200/40 border border-slate-100 flex flex-col relative w-full animate-fadeIn">
+          <div className="bg-white rounded-2xl md:rounded-3xl p-4 sm:p-6 shadow-lg shadow-slate-200/40 border border-slate-100 flex flex-col relative w-full animate-fadeIn">
             
             <h2 className="text-lg md:text-2xl font-black text-slate-800 tracking-tight">Create an Account</h2>
-            <p className="text-[10px] md:text-xs text-slate-500 font-semibold mt-0.5 md:mt-1 mb-4">
+            <p className="text-[10px] md:text-xs text-slate-500 font-semibold mt-0.5 md:mt-1 mb-3">
               Please fill in your details to register on Sanjivani Sync.
             </p>
 
             {/* Toggle Account Type */}
-            <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl mb-4">
+            <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl mb-3">
               <button
                 type="button"
                 onClick={() => setAccountType('user')}
@@ -222,7 +222,7 @@ export default function Signup({ onSuccess, currentHash }) {
 
             {/* Display validation error */}
             {authError && (
-              <div className="mb-3 p-2 bg-rose-50 border border-rose-100 rounded-xl text-[10px] md:text-xs font-semibold text-rose-600 text-center animate-shake flex items-center justify-center gap-1.5">
+              <div className="mb-2.5 p-2 bg-rose-50 border border-rose-100 rounded-xl text-[10px] md:text-xs font-semibold text-rose-600 text-center animate-shake flex items-center justify-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
@@ -230,18 +230,41 @@ export default function Signup({ onSuccess, currentHash }) {
               </div>
             )}
 
+            {/* Google Signup option */}
+            <button
+              type="button"
+              onClick={() => loginWithGoogle()}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-extrabold py-2 md:py-2.5 px-4 rounded-xl md:rounded-2xl transition-all shadow-sm disabled:opacity-50 text-[10px] md:text-xs cursor-pointer select-none"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-2 my-2.5 select-none">
+              <div className="flex-1 h-px bg-slate-100"></div>
+              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Or details</span>
+              <div className="flex-1 h-px bg-slate-100"></div>
+            </div>
+
             {/* Signup Form */}
-            <form onSubmit={handleSignupSubmit} className="flex flex-col gap-3">
+            <form onSubmit={handleSignupSubmit} className="flex flex-col gap-2.5">
               
               {/* Org Type Selection */}
               {accountType === 'organization' && (
-                <div className="flex flex-col gap-1 animate-fadeIn">
-                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Organization Type</label>
+                <div className="flex flex-col gap-0.5 animate-fadeIn">
+                  <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Organization Type</label>
                   <div className="relative">
                     <select
                       value={orgType}
                       onChange={(e) => setOrgType(e.target.value)}
-                      className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all font-semibold text-slate-800 cursor-pointer appearance-none h-10"
+                      className="w-full text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all font-semibold text-slate-800 cursor-pointer appearance-none h-9"
                     >
                       <option value="hospital">Hospital</option>
                       <option value="blood_bank">Blood Bank</option>
@@ -259,11 +282,11 @@ export default function Signup({ onSuccess, currentHash }) {
               )}
 
               {/* Name Field */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">
                   {accountType === 'organization' ? 'Organization Name' : 'Full Name'}
                 </label>
-                <div className="flex items-center border border-slate-200 rounded-xl bg-white focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all px-3 h-10 gap-2">
+                <div className="flex items-center border border-slate-200 rounded-xl bg-white focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all px-3 h-9 gap-1.5">
                   <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
@@ -278,9 +301,9 @@ export default function Signup({ onSuccess, currentHash }) {
               </div>
 
               {/* Email Field */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
-                <div className="flex items-center border border-slate-200 rounded-xl bg-white focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all px-3 h-10 gap-2">
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
+                <div className="flex items-center border border-slate-200 rounded-xl bg-white focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all px-3 h-9 gap-1.5">
                   <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -295,16 +318,16 @@ export default function Signup({ onSuccess, currentHash }) {
               </div>
 
               {/* Contact Number */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Contact Number</label>
-                <div className="flex items-center border border-slate-200 rounded-xl bg-white focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all overflow-hidden h-10">
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Contact Number</label>
+                <div className="flex items-center border border-slate-200 rounded-xl bg-white focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all overflow-hidden h-9">
                   <div className="relative h-full" ref={dropdownRef}>
                     <button
                       type="button"
                       onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                      className="flex items-center gap-1 h-full px-2 border-r border-slate-100 hover:bg-slate-50 text-slate-700 font-bold text-xs cursor-pointer select-none"
+                      className="flex items-center gap-0.5 h-full px-2.5 border-r border-slate-100 hover:bg-slate-50 text-slate-700 font-bold text-[10px] cursor-pointer select-none"
                     >
-                      <span className="text-base">{activeCountry.flag}</span>
+                      <span className="text-sm">{activeCountry.flag}</span>
                       <span>{activeCountry.code}</span>
                       <svg className="w-2.5 h-2.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                         <path d="M19 9l-7 7-7-7" />
@@ -320,9 +343,9 @@ export default function Signup({ onSuccess, currentHash }) {
                               setCountryCode(c.code);
                               setShowCountryDropdown(false);
                             }}
-                            className="w-full flex items-center gap-1.5 px-3 py-1.5 text-left text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                            className="w-full flex items-center gap-1.5 px-4 py-2 text-left text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition-colors"
                           >
-                            <span className="text-sm">{c.flag}</span>
+                            <span className="text-base">{c.flag}</span>
                             <span>{c.code}</span>
                             <span className="text-slate-400 font-medium truncate">({c.name})</span>
                           </button>
@@ -334,7 +357,7 @@ export default function Signup({ onSuccess, currentHash }) {
                     <input
                       type="tel"
                       value={contactNumber}
-                      onChange={(e) => setCountryCode(e.target.value.replace(/\D/g, ''))} // Fix standard code matching
+                      onChange={(e) => setContactNumber(e.target.value.replace(/\D/g, ''))}
                       placeholder="98765 43210"
                       className="w-full text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none bg-transparent"
                     />
@@ -343,9 +366,9 @@ export default function Signup({ onSuccess, currentHash }) {
               </div>
 
               {/* Password Field */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
-                <div className="flex items-center border border-slate-200 rounded-xl bg-white focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all px-3 h-10 gap-2">
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                <div className="flex items-center border border-slate-200 rounded-xl bg-white focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all px-3 h-9 gap-1.5">
                   <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
@@ -363,7 +386,7 @@ export default function Signup({ onSuccess, currentHash }) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-10 bg-[#485ff7] hover:bg-[#394ed9] text-white rounded-xl font-black text-[10px] md:text-xs tracking-wider uppercase flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/25 active:scale-[0.98] disabled:opacity-70 cursor-pointer mt-1"
+                className="w-full h-9 bg-[#485ff7] hover:bg-[#394ed9] text-white rounded-xl font-black text-[10px] md:text-xs tracking-wider uppercase flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/25 active:scale-[0.98] disabled:opacity-70 cursor-pointer mt-1"
               >
                 {isLoading ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -380,7 +403,7 @@ export default function Signup({ onSuccess, currentHash }) {
           </div>
           
           {/* Link to Login */}
-          <p className="text-center text-xs font-semibold text-slate-500 mt-3 select-none">
+          <p className="text-center text-xs font-semibold text-slate-500 mt-2.5 select-none">
             Already have an account?{' '}
             <button 
               type="button" 
@@ -395,7 +418,7 @@ export default function Signup({ onSuccess, currentHash }) {
       </div>
 
       {/* Bottom silhouette background */}
-      <div className="w-full select-none relative h-14 md:h-28 overflow-hidden flex flex-col justify-end text-slate-200/50 flex-shrink-0">
+      <div className="w-full select-none relative h-10 md:h-28 overflow-hidden flex flex-col justify-end text-slate-200/50 flex-shrink-0">
         <svg viewBox="0 0 1000 100" fill="currentColor" className="w-full h-full object-cover">
           <path d="M 50 100 L 100 65 L 150 100 Z" opacity="0.4" />
           <path d="M 100 65 L 120 70 L 135 100 L 100 100 Z" opacity="0.3" />
