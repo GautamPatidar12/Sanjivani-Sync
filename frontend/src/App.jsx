@@ -64,8 +64,8 @@ function App() {
     <div className="relative w-full h-screen bg-gray-50 overflow-hidden select-none">
       
       {/* Soft Aurora Blurry Background Blobs */}
-      <div className="absolute top-[-20%] left-[-10%] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] rounded-full bg-red-100/40 mix-blend-multiply filter blur-[70px] sm:blur-[100px] animate-blob" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] rounded-full bg-rose-100/40 mix-blend-multiply filter blur-[70px] sm:blur-[100px] animate-blob animation-delay-2000" />
+      <div className="absolute top-[-20%] left-[-10%] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] rounded-full bg-emerald-100/35 mix-blend-multiply filter blur-[70px] sm:blur-[100px] animate-blob" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] rounded-full bg-sky-100/35 mix-blend-multiply filter blur-[70px] sm:blur-[100px] animate-blob animation-delay-2000" />
 
       {/* Full Screen Container */}
       <div className="w-full h-full bg-transparent flex flex-col justify-between overflow-hidden relative z-10">
